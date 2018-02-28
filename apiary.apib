@@ -1,0 +1,6034 @@
+FORMAT: 1A
+HOST: https://api.pdffiller.com
+
+# PDFfiller API
+
+[api-payment]: http://developers.pdffiller.com "PDFfiller API-Payment page"
+[settings-tab]: https://developers.pdffiller.com/#api-settings-tab-my-apps
+[authorization]: https://developers.pdffiller.com/api_access
+The PDFfiller API allows its users to build applications that interact with PDFfiller over the HTTP REST methods. All API communications are SSL – encrypted and must be made over HTTPS protocol. We recommend using an SSL version higher than 3 and a TLS version higher than 1.0. For authentication, we support OAuth2 authentication with password and authorization_flow grants. JSON is returned for all API responses except file downloads. PDFfiller provides API client libraries for specific languages to help convert API objects to the language format.
+
+ **API base URL**
+
+`https://api.pdffiller.com`
+
+**API request URL includes API version and object. For example:**
+
+`https://api.pdffiller.com/v2/signature_requests`
+
+**PDFfiller API provides the following features:**
+
+
+* `/fillable_forms` – allows users to share a document by a link, which can be seen, filled out and submitted instantly by their recipients. The fillable documents can be embedded to your site or accessed directly from PDFfiller.
+* `/signature_requests` – allows users to send a document for recipients&rsquo; signature. PDFfiller manages full document workflow including signer notifications, authentication and signature collection order from multiple recipients.
+* `/templates/{template_id}` – allows filling document templates with pre-defined fillable fields. Template fields can be populated by custom data.
+* `/callbacks` – event-triggered callbacks.  HTTP REST requests are sent to custom URL upon completion of specific user actions, such as document filling or signatures.
+* `/tokens` – unique tokens assigned to fillable forms to identify signers and associate custom data, which can be retrieved by API call or returned with callback.
+
+
+## Quickstart
+
+These guides have been designed to demonstrate the advantages of integrating PDFfiller endpoints in three simple steps:
+
+* [Step One – Authentication](#authentication)
+* [Step Two – Template Creation](#create_document)
+* [Step Three – Endpoint Utilization](#endpoint_utilization)
+
+    * [Fillable Template](#fillable_template)
+    * [LinkToFill](#link_to_fill)
+    * [SendToSign](#send_to_sign)
+
+
+
+For the purposes of these guides, we will utilize standard parameter settings so that you can begin implementing the best solution for your documentation needs in as little time as possible.
+
+### Authentication
+<a name="authentication"></a>
+
+Whether you want to create, upload, sign, or send a document, you&rsquo;ll need an access token to utilize PDFfiller&rsquo;s API.
+
+**Step One** – Retrieve your API Key:
+
+Login to your PDFfiller account
+[http://developers.pdffiller.com][api-payment]
+![PDFfiller-dev-page](https://static.pdffiller.com/assets/api/apiary/1_PDFfiller-dev-page.jpg)
+Select the &ldquo;API Settings&rdquo; Tab and copy your API Key
+![API-KEY](https://static.pdffiller.com/assets/api/apiary/api-key2.png)
+
+### Step Two – Create a Document Template or Upload a Document
+<a name="create_document"></a>
+
+Navigate to our [API Documentation](#api_documentation) and select &lsquo;Templates&rsquo; in the reference section on the left.
+![create document 1](https://static.pdffiller.com/assets/api/apiary/create-doc-1.png)
+Click the &lsquo;Create a new document template by uploading file&rsquo; bar. Then, in the developer console on the right, select &lsquo;Switch to Console&rsquo;. Now your screen should match the image below:
+![create document 2](https://static.pdffiller.com/assets/api/apiary/create-doc-2.png)
+Click the &lsquo;Headers&rsquo; submenu of the developer&rsquo;s console, under the &lsquo;Authorization&rsquo; field, replace the &lsquo;Token&rsquo; text with your API key.
+![create document 3](https://static.pdffiller.com/assets/api/apiary/create-doc-3.png)
+Click the &lsquo;URI Parameters&rsquo; submenu and select &ldquo;Add a new query parameter&rdquo;.
+Replace the &lsquo;New item&rsquo; text with &lsquo;file&rsquo;.
+Then replace the &lsquo;null&rsquo; text with the URL of your document (.pdf).
+![create document 4](https://static.pdffiller.com/assets/api/apiary/create-doc-4.png)
+Upload the document of your choice via url. For the purposes of this guide, we will use a blank NDA form.
+Paste the URL into the field and change &lsquo;null&rsquo; to &lsquo;file&rsquo;.
+Now click the &lsquo;Call Resource&rsquo; button.
+![create document 5](https://static.pdffiller.com/assets/api/apiary/create-doc-5.png)
+
+Scroll down in the console to confirm the operation completed successfully. A 200 response indicates that your document request was successful.
+
+#### Upload a Document Template via URL or local disk
+
+Upload a file from your computer:
+```curl
+curl -X "POST" "https://api.pdffiller.com/v2/templates" \
+     -H "Authorization: Bearer API_KEY_FROM_STEP1" \
+     -F "file=@/path/to/file.pdf"
+```
+Upload a file via URL:
+```curl
+curl -X "POST" "https://api.pdffiller.com/v2/templates" \
+     -H "Authorization: Bearer API_KEY_FROM_STEP1" \
+     -H "Content-Type: application/json" \
+     -d "{\"file\":\"http://site.com/file.pdf\"}"
+```
+
+A success response from the API will contain information about the created document template:
+```json
+    {
+        "id": 1111111,
+        "name": "file.pdf",
+        "type": "pdf",
+        "created": 1457373425,
+        "updated": "1457345437",
+        "fillable": "false"
+        "folder": {
+            "folder_id": "0",
+            "name": "Unsorted"
+        }
+    }
+```
+
+## Endpoint Utilization
+<a name="endpoint_utilization"></a>
+
+**Step Three**  – Choose Your Endpoint:
+
+[Create a Fillable Template](#fillable_template)
+
+[Create a LinkToFill Document](#link_to_fill)
+
+[Create a SendToSign Document](#send_to_sign)
+
+### Fillable Template – Creating and Sending Your Fillable Form
+<a name="fillable_template"></a>
+
+Now that you&rsquo;ve created a document to be filled, you&rsquo;ll want to send it out. To do this, scroll down to the &lsquo;Body&rsquo; section at the bottom of the console to retrieve your document id and copy it to your clipboard:
+
+![create document 6](https://static.pdffiller.com/assets/api/apiary/create-doc-6.png)
+Open a new tab in your internet browser and proceed to your MyBox at <https://www.pdffiller.com/en/forms.htm> where you should find your newly imported NDA form.
+![MyBox New Doc](https://static.pdffiller.com/assets/api/apiary/18_MyBox_New_Doc.jpg)
+To begin adding fillable fields to the form, click on the green &lsquo;Add Fillable Fields&rsquo; tab located in the upper-right of the PDFfiller interface:
+![Adding Fillable Fields](https://static.pdffiller.com/assets/api/apiary/19_Adding_Fillable_Fields.jpg)
+Now that you&rsquo;ve finished adding your desired fillable fields, copy the new document id located in the address bar:
+![Copy New Doc id](https://static.pdffiller.com/assets/api/apiary/20_Copy_New_Doc_id.jpg)
+For every fillable field you add, you&rsquo;ll need to assign a  **field name**  which will be noted when sharing the document. To do this, click on the fillable field you wish to name and under the &lsquo;Add Fillable Fields&rsquo; tab, select &lsquo;Advanced&rsquo; and scroll to the &lsquo;Database Field Name&rsquo; bar:
+![Name Fillable Fields](https://static.pdffiller.com/assets/api/apiary/21_Name_Fillable_Fields.jpg)
+
+**A. Populating the &lsquo;Body&rsquo; field:**
+
+Switch back to the PDFfiller API tab and add the fillable fields with their Database Field Names to the &lsquo;Body&rsquo; field with the text you would like to populate the fillable field with, for example:
+![Create Document 7](https://static.pdffiller.com/assets/api/apiary/create-doc-7.png)
+Scroll down in the console to confirm the operation completed successfully. A 200 response indicates that your document request was successful.
+Now switch back to &lsquo;MyBox&rsquo; at your PDFfiller tab and confirm that your desired fields were completed in your updated document:
+![Body Completed Fields](https://static.pdffiller.com/assets/api/apiary/23_Body_Completed_Fields.jpg)
+See the LinkToFill or SendToSign quickstart guides for distributing Fillable Documents to your recipients.
+
+### LinkToFill – Sharing Your Fillable Form
+<a name="link_to_fill"></a>
+
+Now that you&rsquo;ve created a document to be filled, you&rsquo;ll want to send it out. To do this, scroll down to the &lsquo;Body&rsquo; section at the bottom of the console to retrieve your document id and copy it to your clipboard:
+![LinkToFill 1](https://static.pdffiller.com/assets/api/apiary/l2f-1.png)
+With your document id and API Key, select &lsquo;Fillable Forms&rsquo; in the reference section on the left. Then click on &lsquo;Create Fillable Form&rsquo;.
+![LinkToFill 2](https://static.pdffiller.com/assets/api/apiary/l2f-2.png)
+Click the &lsquo;Headers&rsquo; submenu in the developer&rsquo;s console and under the &lsquo;Authorization&rsquo; field, replace the &lsquo;Token&rsquo; text with your API key.
+![LinkToFill 3](https://static.pdffiller.com/assets/api/apiary/l2f-3.png)
+Click the &lsquo;Body&rsquo; submenu and paste your document id over the existing number:
+![LinkToFill 4](https://static.pdffiller.com/assets/api/apiary/l2f-4.png)
+Delete all of the other text so that only your document id information remains.
+![LinkToFill 5](https://static.pdffiller.com/assets/api/apiary/l2f-5.png)
+Click the &lsquo;Call Resource&rsquo; button.
+Scroll down in the console to confirm the operation completed successfully. A 200 response indicates that your document request was successful. Scroll to the bottom of the console to fetch your template&rsquo;s shareable URL:
+![LinkToFill 6](https://static.pdffiller.com/assets/api/apiary/l2f-6.png)
+You now have a link to your fillable document which may be used to share with your recipients.
+
+### SendToSign – Send Your Recipients a Signature Request
+<a name="send_to_sign"></a>
+
+Now that you&rsquo;ve created a document to be signed, you&rsquo;ll want to send it out. To do this, scroll down to the &lsquo;Body&rsquo; section at the bottom of the console to retrieve your document id and copy it to your clipboard:
+![SendToSign 1](https://static.pdffiller.com/assets/api/apiary/s2s-1.png)
+With your document id and API Key, select &lsquo;Signature requests&rsquo; in the reference section on the left. Then click on &lsquo;Create Signature request&rsquo;.
+![SendToSign 2](https://static.pdffiller.com/assets/api/apiary/s2s-2.png)
+Click the &lsquo;Headers&rsquo; submenu in the developer&rsquo;s console and under the &lsquo;Authorization&rsquo; field, replace the &lsquo;Token&rsquo; text with your API key.
+![SendToSign 3](https://static.pdffiller.com/assets/api/apiary/s2s-3.png)
+SendToSign supports two signature request methods:
+
+* [sendtoeach](#send_to_each) – a document is to be signed individually.
+* [sendtogroup](#send_to_group) – a document is to be signed by multiple recipients.
+
+Whichever method you choose, it will be necessary to modify the field properties.
+
+#### A. SendToEach:
+<a name="send_to_each"></a>
+
+For &lsquo;sendtoeach&rsquo; you&rsquo;ll need to modify the body field properties (using the below example). Be sure to edit the fields highlighted in yellow with your own credentials:
+```json
+    {
+      "document_id": 123456789,
+      "method": "sendtoeach",
+      "security_pin": "standard",
+      "recipients": [
+        {
+          "email": "john@email.com",
+          "name": "John",
+          "message_subject": "Digital signature request from API Testing Letter",
+          "message_text": "Please sign and return the linked document with PDFfiller",
+          "access": "full"
+        }
+      ]
+    }
+```
+
+![SendToSign 4](https://static.pdffiller.com/assets/api/apiary/s2s-4.png)
+Scroll down in the console to confirm the operation completed successfully. A 200 response indicates that your document request was successful.
+
+#### B. SendToGroup:
+<a name="send_to_group"></a>
+
+For &lsquo;sendtogroup&rsquo; you&rsquo;ll need to modify the body field properties (using the below example  – contains two recipients). Be sure to edit the fields highlighted in yellow with your own credentials:
+```json
+    {
+        "document_id": 123456789,
+        "method": "sendtogroup",
+        "envelope_name": "EnvelopeAPI",
+        "security_pin": "standard",
+        "sign_in_order": true,
+        "recipients": [
+            {
+                "role": 11,
+                "email": "john@email.com",
+                "name": "John",
+                "order": 1,
+                "message_subject": "Digital signature request from API Testing Letter",
+                "message_text": "Please sign and return the linked document with PDFfiller",
+                "access": "signature"
+            },
+            {
+                "role": 45,
+                "email": "jane@email.com",
+                "name": "Jane",
+                "order": 2,
+                "message_subject": "Digital signature request from API Testing Letter",
+                "message_text": "Please sign and return the linked document with PDFfiller",
+                "access": "full"
+            }
+        ]
+    }
+```
+![SendToSign 5](https://static.pdffiller.com/assets/api/apiary/s2s-5.png)
+Scroll down in the console to confirm the operation completed successfully. A 200 response indicates that your document request was successful.
+
+## Authentication Overview
+
+PDFFiller API authentication is based on the OAuth 2.0. security framework.
+OAuth 2.0. is a protocol that allows your application to request authorization to private data in a user&rsquo;s PDFfiller account without getting their password.
+The first step in the authentication process is to obtain an API key, or access token, from the PDFfiller server to authorize access to the API. The OAuth 2.0 framework provides a number of methods for obtaining the access token from the PDFfiller authorization server. The simplest way of getting the API key for a registered user is to click on the API Settings tab on the [PDFfiller API-Payment page][api-payment].
+![API Key](https://static.pdffiller.com/assets/api/apiary/api-key2.png)
+The API key is shown in the Security section. Copy the API key and insert it into the HTTP header &ldquo;Authorization&rdquo; to send requests to PDFfiller&rsquo;s server:
+
+**&ldquo;Authorization: Bearer API_KEY&rdquo;**
+
+API Key must be included in the HTTP &ldquo;Authorization&rdquo; header with  **every**  API request along with &ldquo;Bearer&rdquo; token type.
+You can refresh the API key by pressing REGENERATE KEY.
+
+### OAuth 2.0 Authorization
+
+OAuth 2.0 allows your app to request authorization to access documents and other information in a PDFfiller user&rsquo;s account and to perform PDffiller operations on behalf of a user.
+
+#### Step 1 – Create Application
+
+To start with OAuth 2.0 authorization flow, you need [register your application in PDFfiller API Settings][settings-tab]. Upon registration, app is assigned a Client ID and Client Secret, which will be used to authorize against PDFfiller and to obtain authorization grant.
+Open [My Apps section on PDFfiller API-Payment website][settings-tab] and click *CREATE NEW APP* button.
+![Create New Application](https://static.pdffiller.com/assets/api/apiary/create-new-app.png)
+
+Fill the form and click  **CREATE APPLICATION** button.
+
+* `Name` - name to identify your app
+* `Description` – brief description of the app
+* `OAuth callback Url` – callback URl where authorization grant will be returned after successful authentication
+
+![Create New Application Form](https://static.pdffiller.com/assets/api/apiary/create-new-app-form.jpg)
+Note  **Client ID**  and  **Client Secret** . You will use them later in your authentication process.
+
+#### Step2 – Obtain Authorization Code
+
+From your app you need to redirect  your user to:
+```html
+https://developers.pdffiller.com/api_access?client_id=<client_id>&redirect_uri=<redirect_url>
+```
+
+Users will be asked to login to PDFfiller if needed. Following authorization dialog will be presented to user:
+![Application Access](https://static.pdffiller.com/assets/api/apiary/application-access.jpg)
+When AUTHORIZE button clicked, user redirected to REDIRECT_URL from application setup with issued  **authorization_code** :
+ 
+```html
+https://REDIRECT_URL/?code=<authorization_code>&v=
+```
+
+#### Step3 – Obtain Access Token
+
+Now, you can use authorization token obtained in the Step2 to obtain your authorization grant
+```curl
+curl -X "POST" "https://api.pdffiller.com/v2/oauth/token" \
+     -H "Content-Type: application/json; charset=utf-8" \
+     -d "{
+           \"grant_type\":\"authorization_code\",
+           \"code\":\"<your code>\",
+           \"client_id\":\"<your client id>\",
+           \"client_secret\":\"<your client secret>\",
+           \"redirect_uri\":\"http://example.com/token\"
+         }"
+```
+
+### OAuth 2.0 Grants
+
+The OAuth 2.0 code grant flow allows issuing access tokens on behalf of users. It means that your application can request authorization to access documents and other information in a user&rsquo;s account and perform PDffiller operations on behalf of this user. In this case, the authentication process has several steps. To start the OAuth 2.0 authorization flow, you need to  **register your application** or client in the PDFfiller API Settings. Upon registration, the application is assigned a Client ID and Client Secret, which will be used to send an authorization request to the user&rsquo;s PDFfiller account and obtain an authorization grant.
+Generally, OAth 2.0 provides a number of methods, or grants, which allow the application to get the access tokens. PDFfiller API uses three types of authorization grants: authorization code grant, resource owner credentials grant, and refresh token grant.
+
+**Authorization Code Grant**
+
+The scheme of authorization code grant flow is as follows:
+![API Picture 1-1](https://static.pdffiller.com/assets/api/apiary/API-picture-1-1.jpg)
+#### Step 1
+The application redirects the user to:
+[https://developers.pdffiller.com/api_access][authorization] page with the following parameters in the query string:
+*  **client_id**  with the client identifier
+*  **redirect_uri**  with the client redirect URI
+
+#### Step 2
+The user authorizes the application to access the account, and the authorization code is returned to the above mentioned redirect URI with the following parameters in the query string:
+*  **code**  - authorization code
+*  **v**  - authorization token was successfully generated and can be used for v1 or v2.
+
+Note: "v=fail" - V1 authorization token could not be generated. Please confirm your authorization credentials for v1 or contact our customer service department if your have any further questions. 
+#### Step 3
+The application sends this authorization code to the PDFfiller authorization server and receives an access token:
+https://api.pdffiller.com/v2/oauth/token:
+
+*  **grant_type**  with the value of  **authorization_code** 
+*  **client_id**  with the client identifier
+*  **client_secret**  with the client secret
+*  **redirect_uri**  with the same redirect URI the user was redirected back to
+*  **code**  with the authorization code from the query string
+
+#### Step 4
+The authorization server will respond with a JSON object containing the following properties:
+
+*  **expires_in**  with an integer representing the TTL of the access token (i.e. when the token will expire)
+*  **access_token**  the access token itself
+*  **refresh_token**  a refresh token that can be used to acquire a new access token when the original expires
+
+This grant type is used for confidential applications.
+The process of acquiring the access token can omit the specific steps from the  **authorization code grant scheme.** 
+#### Resource Owner Credentials Grant
+Resource owner credentials grant is recommended to use only with trusted first party applications. To obtain an access token, the application asks the user for their authorization credentials (user ID and password). When the credentials are received, the client sends the request to the authorization server:
+
+*  **grant_type**  with the value  **password** 
+*  **client_id**  with the client&rsquo;s ID
+*  **client_secret**  with the client&rsquo;s secret
+*  **username**  with the user&rsquo;s username
+*  **password**  with the user&rsquo;s password
+
+The PDFfiller authorization server responds with a JSON object featuring the following:
+
+*  **token_type**  with the value Bearer
+*  **expires_in**  with an integer representing the TTL of the access token
+*  **access_token**  the access token itself
+*  **refresh_token**  a refresh token that can be used to acquire a new access token when the original expires
+
+As we can see, this flow has fewer steps than the previous one. The client requests the access token from the PDFfiller authorization server and includes the user&rsquo;s credentials into this request.
+Finally, the third type of the grant is a  **refresh token grant** .
+#### Refresh Token Grant
+Eventually the acquired access token will expire. However, your application can receive credentials which allow getting a new access token without sending requests to the resource server. The refresh token is issued by the authorization server when the current access token expires. The refresh token is included in the process of issuing the access token.
+The flow of sending requests to the authorization server is as follows:
+
+*  **grant_type**  with the value refresh_token
+*  **refresh_token**  with the refresh token
+*  **client_id**  with the the client&rsquo;s ID
+*  **client_secret**  with the client&rsquo;s secret
+
+The authorization server responds in the following manner:
+
+*  **token_type**  with the value  **Bearer** 
+*  **expires_in**  with an integer representing the TTL of the access token
+*  **access_token**  the access token itself
+*  **refresh_token**  a refresh token that can be used to acquire a new access token when the original expires
+
+Before choosing what grant type to use, take into account these two main factors: the type of the application (first party or third party application) and the experience you&rsquo;d like for your users.
+
+## Examples
+
+### Signature request through PDFfiller
+
+##### 1. Get the API KEY from &ldquo;API Settings&rdquo; tab in [PDFfiller API-Payment page][api-payment].
+
+##### 2. Upload a document to PDFfiller
+
+```curl
+curl -X "POST" "https://api.pdffiller.com/v2/templates" \
+     -H "Authorization: Bearer API_KEY_FROM_STEP1" \
+     -F "file=@/path/to/file.pdf"
+```
+Save document ID from the upload response
+```json
+{
+    "id": 1111111,
+    "name": "file.pdf",
+    "type": "pdf",
+    "created": 1457373425,
+    "updated": 1495525577,
+    "fillable": false,
+    "folder": {
+        "folder_id": 0,
+        "name": "Unsorted"
+    }
+}
+```
+
+##### 3. Send a signature request
+```curl
+{
+  "method": "sendtoeach",
+  "document_id": DOCUMENT_ID_FROM_STEP_3,
+  "security_pin": "standard",
+  "recipients": [
+    {
+      "email": "jdoe@pdffiller.com",
+      "name": "john",
+      "message_subject": "Digital signature request from API Testing Letter",
+      "message_text": "Please sign and return the linked document with PDFfiller",
+      "access": "full",
+      "require_photo": false
+    }
+  ]
+}
+
+|    curl https://api.pdffiller.com/v2/signature_requests \
+          -i \
+          -H "Authorization: Bearer API_KEY_FROM_STEP1" \
+          -H "Content-Type: application/json" \
+          -H "Accept: application/json" \
+          -d @- \
+          -X POST
+```
+
+Save signature request ID from the response
+##### 4. Check signature status
+
+```curl
+curl -X GET https://api.pdffiller.com/v2/signature_requests/SIGNATURE_REQUEST_ID_FROM_STEP_4 \
+     -H "Authorization: Bearer API_KEY_FROM_STEP1"
+```
+##### 5. Download a signed document
+
+```curl
+curl -X GET https://api.pdffiller.com/v2/signature_requests/SIGNATURE_REQUEST_ID_FROM_STEP_4/signed_document \
+     -H "Authorization: Bearer API_KEY_FROM_STEP1" -o file.pdf
+```
+##### 6. Download signature request cerificate
+
+```curl
+curl -X GET https://api.pdffiller.com/v2/signature_requests/SIGNATURE_REQUEST_ID_FROM_STEP_4/certificate \
+     -H "Authorization: Bearer ACCESS_TOKEN_FROM_STEP2" -o file.pdf
+```
+
+### Signature/fillable form from your website
+
+##### 1. Get the API KEY from &ldquo;API Settings&rdquo; tab in [PDFfiller API-Payment page][api-payment].
+##### 2. Upload a document from URL
+```curl
+curl -X "POST" "https://api.pdffiller.com/v2/templates" \
+     -H "Authorization: Bearer API_KEY_FROM_STEP1" \
+     -H "Content-Type: application/json" \
+     -d "{\"file\":\"https://some.url/somefile.pdf\"}"
+```
+Save ID from the JSON response for further steps
+##### 3. Create a fillable_form entity based on the document uploaded in step 2
+```curl
+curl -X "POST" "https://api.pdffiller.com/v2/fillable_forms" \
+     -H "Authorization: Bearer API_KEY_FROM_STEP1" \
+     -H "Content-Type: application/json" \
+     -d "{\"document_id\":\"DOCUMENT_ID_FROM_STEP2\",\"access\":\"full\",\"status\":\"public\"}"
+```
+Save  **fillable_form_id**  and  **url**  element values from the JSON response.
+ **url**  is a publicly accessible fillable document which you can share with others. When a document is filled out or signed by somebody, you are going to receive email notifications.
+ **fillable_form_id**  is ID of a LinkToFill created by the fillable form.
+You can also register callbacks (See [Callbacks Documentation](#callbacks_endpoints)) to receive automatic REST HTTP callbacks for a document signature or filling events.
+##### 4. List all completed PDF forms for a specific document
+```curl
+curl -X "GET" "https://api.pdffiller.com/v2/fillable_forms/FILLABLE_FORM_ID_FROM_STEP3/filled_forms" \
+     -H "Authorization: Bearer API_KEY_FROM_STEP1" \
+     -H "Content-Type: application/json"
+```
+Save  **id**  of the filled form item from the response
+```json
+{
+    "items": [
+        {
+            "id": 56900,
+            …
+        }
+    ]
+}
+```
+##### 5. Download a filled PDF form
+```curl
+curl -X "GET" "https://api.pdffiller.com/v2/fillable_forms/FILLABLE_FORM_ID_FROM_STEP3/filled_forms/FILLED_FORM_ID_FROM_STEP4/download" \
+     -H "Authorization: Bearer API_KEY_FROM_STEP1"
+```
+
+*\*Note, you can also attach a callback to a specific document to receive a REST call notification to a custom URL when form filling is complete.**
+
+File content will be sent back in the response body
+
+### Fill the fillable form
+
+##### Create a fillable template through PDFfiller website
+
+1. Upload a PDF form to PDFFiller website to create a fillable template and to define fillable fields using Web Constructor. This tutorial describes how to use Fillable Constructor: <https://www.youtube.com/watch?v=8IPMuQayKxw>
+2. When a form is created, save project ID (i.e.  **DOCUMENT_ID** ) of the created fillable template:
+Click &lsquo; **More -&gt; Project Info** &lsquo; in MyForms on PDFFiller website or request this info through the API.
+3. Now you can use Templates functionality of the API to populate this template to generate filled forms. See API call examples in the next section.
+
+#### API calls to fill the template
+##### 1. Get the API KEY from &ldquo;API Settings&rdquo; tab in [PDFfiller API-Payment page][api-payment].
+##### 2. Get information about fillable fields for the template
+```curl
+curl -X "GET" "https://api.pdffiller.com/v2/templates/TEMPLATE_ID/fields" \
+     -H "Authorization: Bearer API_KEY_FROM_STEP1"
+```
+##### 3. Fill the template form
+```curl
+curl -X "POST" "https://api.pdffiller.com/v2/templates/TEMPLATE_ID" \
+     -H "Authorization: Bearer API_KEY_FROM_STEP1" \
+     -H "Content-Type: application/json"
+```
+
+Currently, we support these fillable fields types: Text, Number, Dropdown, Date, Checkbox.
+We use the following JSON format to fill forms:
+```json
+    {
+        "name": "new_name_for_file",
+        "fillable_fields": {
+            "FIELD_NAME_1": "FIELD_VALUE_1",
+            "FIELD_NAME_2": "FIELD_VALUE_2",
+            "FIELD_NAME_N": "FIELD_VALUE_N"
+        }
+    }
+```
+
+Now you can download the generated form or use SendToSign API to send it for signature.
+##### 4. Download a filled PDF form
+```curl
+curl -X "GET" "https://api.pdffiller.com/v2/templates/TEMPLATE_ID/download" \
+     -H "Authorization: Bearer API_KEY_FROM_STEP1"
+```
+File content will be sent back in the response body
+
+### Embedded JS Client
+
+ **Embedded JS Client**  allows to embed fillable documents directly to your site in an iFrame. The documentation below describes setup steps and requirements for the embedded LinkToFill flow.
+Note: By default, The API app domain name in OAuth Callback Url indicates where the Client can be opened. Embedded JS Client will only works on pages from this domain.
+To manually specify the domain name, please go to [App Settings][settings-tab], scroll to the Embedded JS Client section, and type the domain name in the Access Domain URL field. You can also use the Allow All Domains checkbox to place the Embedded JS Client on any domain.
+The iFrame checks that the parent window belongs to the domain associated with your app. If it does not, the PDFfiller page will show &ldquo;Domain verification failed&rdquo; error message in iframe.
+*Preliminary*
+
+Before you start doing anything, make sure the following steps have been done:
+1. [Create an API app][api-payment] for your domain (login required)
+![Create New App Form](https://static.pdffiller.com/assets/api/apiary/create-new-app-form.jpg)
+2. Include JS library reference on your page:
+```html
+    <script src="//integrations-static.pdffiller.com/1.0.3/PDFfillerClient.js"></script>
+```
+3. Open the client dialog window using the following code:
+```javascript
+PDFfiller.init({
+    client_id: "application-id-created-by-step-1",
+    url: "your-link-to-fill-url",
+    width: "(optional) width in pixels, recommended 960",
+    height: "(optional) height in pixels"
+});
+```
+
+
+parameters        | info
+--------------|-------------
+client_id     | Your application_id from step 1
+url           | A LinkToFill URL you&rsquo;re sending. It should be publicly accessible when you create the document.
+width (optional)|Recommended 960 px
+height (optional)| Recommended 600 px.
+
+
+# Group Authentication
+Obtains authentication token based on provided Client ID and Client Secret
+
+## Authenticate [/v2/oauth/token]
+
+### Obtain Authentication Token by Grant Type Password [POST /v2/oauth/token]
+Obtains authentication token based on provided Client ID and Client Secret
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json; charset=UTF-8
+    + Attributes (`Password_grant`)
+
+    + Body
+
+            {
+              "grant_type": "password",
+              "client_id": "ea eu est",
+              "client_secret": "officia tempor dolor",
+              "username": "enim sunt sit culpa",
+              "password": "sed"
+            }
+
++ Response 200 (application/json; charset=UTF-8)
+
+    Success - Access token information
+
+    + Attributes (Authenticate_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Obtain Authentication Token by Grant Type Refresh Token  [POST /v2/oauth/token ]
+Obtains authentication token based on provided Client ID and Client Secret
++ Request (application/json)
+
+    + Headers
+
+            Accept: application/json; charset=UTF-8
+
+    + Attributes (`Refresh_token_grant`)
+    + Body
+
+            {
+              "grant_type": "refresh_token",
+              "client_id": "ad",
+              "client_secret": "ex nulla irure",
+              "refresh_token": "in quis"
+            }
+
++ Response 200 (application/json; charset=UTF-8)
+
+    Success - Access token information
+
+    + Attributes (Authenticate_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+# Group Templates
+<a name="api_documentation"></a>
+
+## Template [/v2/templates]
+
+### Retrieves a list of uploaded templates [GET /v2/templates{?folder_id,date_from,date_to,per_page,page,order,order_by}]
+ Retrieves a list of uploaded documents.
++ Request (application/x-www-form-urlencoded)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + folder_id (number, optional, `0`) - Filter by folder.
+    + date_from: `2016-12-31` (string, optional) - Filter by date from.
+    + date_to: `2017-12-31` (string, optional) - Filter by date to.
+    + `per_page`: `15` (number, optional) - Filter by quantity of templates on the page
+        + Default: `15`
+    + `page`: `1` (number, optional) - Filter by page
+        + Default: `1`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+    + `order_by`: `updated` (string, optional) - Filter for sort by selected property
+        + Default: `id`
+
++ Response 200 (application/json)
+
+    Success - list of uploaded document templates
+
+    + Attributes (List)
+        + items (array[Template_info])
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    Forbidden - access to resource forbidden for this resource
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Creates a new document template by uploading file via URL [POST /v2/templates{?with_tags,with_fields}]
+Creates a new document template. The filename must contain numbers, English letters or special characters: ( ) _ . Also, the filename extension should be .ppt; .pptx; .doc; .docx; or .pdf. You can download document from multipart
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Template_post)
+
++ Parameters
+    + `with_tags`: true (boolean, optional) - All document tags will be rendered as fillable fields.
+        + Default: false
+    + `with_fields`: true (boolean, optional) - All document visual fields will be rendered as fillable fields.
+        + Default: false
+
++ Response 200 (application/json)
+
+    Success - information about new document template
+
+    + Attributes (Template_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Creates a new document template by uploading file from multipart [POST /v2/templates{?with_tags,with_fields} ]
+Creates a new document template via multipart. The filename must contain integers, English letters or special characters:( ) _ . Also, the filename extension should be .ppt; .pptx; .doc; .docx; or .pdf
+
++ Request (multipart/form-data; boundary={boundary value})
+
+    + Headers
+
+            Authorization: Bearer Access_token
+
+    + Attributes (Template_post)
+
+    + Body
+
+                --{boundary value}
+                Content-Disposition: form-data; name='file'; filename='somename.pdf'
+
+                upload the content
+
+                --{boundary value}
+                Content-Disposition: form-data; name='folderid'
+
+                0
+                --{boundary value}--
+
++ Parameters
+    + `with_tags`: true (boolean, optional) - All document tags will be rendered as fillable fields.
+        + Default: false
+    + `with_fields`: true (boolean, optional) - All document visual fields will be rendered as fillable fields.
+        + Default: false
+
++ Response 200 (application/json)
+
+    Success - information about new document template
+
+    + Attributes (Template_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Previews Document Template [GET /v2/templates/{template_id}/previews{?pages%5b%5d,scale,max_width,max_height}]
+Previews a document template.
+
++ Request
+
+    + Headers
+
+            Authorization: Bearer Access_token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a document template.
+    + `pages%5b%5d` (array, optional) - Page numbers of the document template. Max length = 10.
+        + Default: 1
+    + `scale` (number, optional) - Scale of preview pages. Min value - 10, max value - 500.
+    + `max_width` (number, optional) - Max width of preview pages. Min value - 10, max value - 3000.
+    + `max_height` (number, optional) - Max height of preview pages. Min value - 10, max value - 3000.
+
++ Response 200 (application/json)
+
+    Success. Images of document pages.
+
+    + Attributes (Previews_template)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request+URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Copy Documents [POST /v2/templates/{template_id}]
+Copy any document: name the new document and select a destination folder.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+
++ Attributes (Template_copy)
+
++ Response 200 (application/json)
+
+    Success - filled the form template
+
+    + Attributes (Template_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Information about created template [GET /v2/templates/{template_id}]
+Retrieves information about a created document template.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+
++ Response 200 (application/json)
+
+    Success - Information about created document template
+
+    + Attributes (Template_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Updates template information [PUT /v2/templates/{template_id}]
+Updates the information for a document template.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+
++ Attributes (Template_put)
+
++ Response 200 (application/json)
+
+    Success - Information about updated document template
+
+    + Attributes (Template_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Downloads document template [GET /v2/templates/{template_id}/download]
+ Downloads a document template.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+
++ Response 200
+
+        Success. PDF file to download
+
++ Response 211 (application/json)
+
+    The file is not ready at the moment. Please resend request later
+
+    + Body
+
+            {
+                "status": "Running"
+            }
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "integer"
+                }
+              }
+            }
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### List Template Roles [GET /v2/templates/{template_id}/roles]
+Retrieves a list of roles for a document template.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+
++ Response 200 (application/json)
+
+    Success. Roles list
+
+    + Attributes (List)
+        + items (array[Role_info])
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Original Document Download [GET /v2/templates/{template_id}/original_document]
+Retrieves original document.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+
++ Response 200
+
+        Success - Uploading the initial version of the document
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Deletes document template item [DELETE /v2/templates/{template_id}]
+ Deletes a document template item.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Delete_response)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Fillable Template [/v2/templates/{template_id}/fields]
+
+### Fillable fields for selected document template with values [GET /v2/templates/{template_id}/fields]
+Get values for a fillable form.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+
++ Response 200 (application/json)
+
+    Success - fields list for selected document template
+
+    + Attributes (array[Fillable_template_field])
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Child documents for selected document template [GET /v2/templates/{template_id}/filled_documents{?per_page,page,order}]
+Retrieves child documents for a selected document template.
++ Request (application/x-www-form-urlencoded)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+    + `per_page`: `15` (number, optional) - Filter by quantity of templates on the page
+        + Default: `15`
+    + `page`: `1` (number, optional) - Filter by page
+        + Default: `1`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+
++ Response 200 (application/json)
+
+    Success - Information about child templates
+
+    + Attributes (List)
+            + items (array[Template_info])
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Downloads zip archive of signatures [GET /v2/templates/{template_id}/download_signatures]
+Downloads a zip archive of document signatures.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+
++ Response 200
+
+        Success. Zip archive to download
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Fills a fillable form template [POST /v2/templates/{template_id}]
+Populates a fillable form template which was created with the PDFfiller editor.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Fill_template_attr)
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+
++ Response 200 (application/json)
+
+    Success - filled the form template
+
+    + Attributes (Template_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Template Constructor [/v2/templates/{template_id}/constructor]
+
+### Create Template Constructor Link [POST]
+Creates a new share link to a document.
+ **Note:** Callback notifications are unavailable for document authors saving edits via their Constructor link.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Constructor_post)
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+
++ Response 200 (application/json)
+
+    Success - information about new share link
+
+    + Attributes (Constructor_created)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### List Hash [GET]
+Retrieves a list of hash.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Constructor_list)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Delete Share Link (hash) [DELETE /v2/templates/{template_id}/constructor/{hash}]
+Deletes one share link to a document by hash.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template
+    + hash: `hash` (string, required) - Hash for shared link
+
++ Response 200 (application/json)
+
+    Success - information about new share link
+
+    + Attributes
+        + message: `One URL to the documents was deleted` (string)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Delete All Share Links [DELETE]
+ Deletes all share links to a document by id.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + template_id: 1023456789 (number, required) - Id of a template.
+
++ Response 200 (application/json)
+
+    Success - information about new share link
+
+    + Attributes
+        + message: `All URLs to the documents were deleted` (string)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+# Group Fillable Forms
+
+## Fillable Form [/v2/fillable_forms]
+
+### List All Document Fill Requests [GET /v2/fillable_forms{?per_page,page,order,order_by}]
+Returns a list of all document fill requests.
++ Request (application/x-www-form-urlencoded)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + `per_page`: `15` (number, optional) - Filter by quantity of fillable forms on the page
+        + Default: `15`
+    + `page`: `1` (number, optional) - Filter by page
+        + Default: `1`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+    + `order_by`: `document_name` (string, optional) - Filter for sort by custom property
+        + Default: `fillable_form_id`
+
++ Response 200 (application/json)
+
+    Success - List of all created FillRequests
+
+    + Attributes (List)
+        + items (array[Fillable_forms_info])
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    Forbidden - access to resource forbidden for this application
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Create a standard LinkToFill Document [POST /v2/fillable_forms]
+Creates a new document and shares it via short url.
++ Request  (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Fillable_forms_attr_post)
+
++ Response 200 (application/json)
+
+    Success - Information about created fill request item
+
+    + Attributes (Fillable_forms_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Create Fillable Document uses the completed fields of an existing document to the fillable fields of a new LinkToFill document. [POST /v2/fillable_forms ]
+Creates a new document and shares it via short url.
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Fillable_forms_attr_post_pefill)
+
++ Response 200 (application/json)
+
+    Success - Information about created fill request item
+
+    + Attributes (Fillable_forms_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Create Fillable Document - Converts a downloaded document to a LinkToFill form [POST /v2/fillable_forms  ]
+Creates a new document and shares it via short url.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Fillable_forms_attr_post_file)
+
++ Response 200 (application/json)
+
+    Success - Information about created fill request item
+
+    + Attributes (Fillable_forms_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Fill Form Information [GET /v2/fillable_forms/{link_to_fill_id}]
+Information about a created fill request item.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + link_to_fill_id: 123456789 (number, required) - Fill request Id.
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Fillable_forms_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Updates Fillable Form [PUT /v2/fillable_forms/{link_to_fill_id}]
+Updates a fill request item.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Fillable_forms_attr_put)
+
++ Parameters
+    + link_to_fill_id: 123456789 (number, required) - Fill request Id.
+
++ Response 200 (application/json)
+
+    Success - Information about created fill request item
+
+    + Attributes (Fillable_forms_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Deletes Fillable Form by id [DELETE /v2/fillable_forms/{link_to_fill_id}]
+Deletes a fill request item.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + link_to_fill_id: 123456789 (number, required) - Fill request Id.
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Delete_response)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Download All Filled Forms [GET /v2/fillable_forms/{link_to_fill_id}/download]
+You can easily export all the completed documents created via LinkToFill as a zip file. This method can give three statuses: Creating a Job with Job ID, Waiting (if zip is still in progress) or Zip content (if files ready to export).
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + link_to_fill_id: 123456789 (number, required) - Fill request Id.
+
++ Response 200
+
+            Success. Attached zip-file to download.
+
++ Response 202 (application/json)
+
+    Accepted - Creating a Job with Job ID
+
+    + Attributes (Documents_job)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Filled Form [/v2/fillable_forms/{link_to_fill_id}/filled_forms]
+
+### List Filled Forms for Fill Request [GET /v2/fillable_forms/{link_to_fill_id}/filled_forms{?per_page,page,order}]
+Lists all filled forms for the given fill request.
++ Request (application/x-www-form-urlencoded)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + link_to_fill_id: 123456789 (number, required) - Fill request Id.
+    + `per_page`: `15` (number, optional) - Filter by quantity of applications on the page
+        + Default: `15`
+    + `page`: `1` (number, optional) - Filter by page
+        + Default: `1`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (List)
+        + items (array[Filled_forms_info])
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Filled Form Information [GET /v2/fillable_forms/{link_to_fill_id}/filled_forms/{filled_form_id}]
+Information about a specific filled form.
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + link_to_fill_id: 123456789 (number, required) - Fill Request ID.
+    + filled_form_id: 654321 (number, required) - Filled Form ID
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Filled_forms_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Deletes Filled Form [DELETE /v2/fillable_forms/{link_to_fill_id}/filled_forms/{filled_form_id}]
+Deletes a filled form.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + link_to_fill_id: 123456789 (number, required) - Fill request Id.
+    + filled_form_id: 654321 (number, required) - Filled Form ID
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Delete_response)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Data Export [/v2/fillable_forms/{link_to_fill_id}/filled_forms/{filled_form_id}/export]
+
+### Exports Filled Form Data [GET]
+Exports filled form data in one of the available formats: json, xls, xlsx, csv, html.
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + link_to_fill_id: 123456789 (number, required) - Fill request Id.
+    + filled_form_id: 654321 (number, required) - Filled Form ID
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Filled_forms_export_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Download Filled PDF Form [GET /v2/fillable_forms/{link_to_fill_id}/filled_forms/{filled_form_id}/download]
+Downloads a filled PDF form.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + link_to_fill_id: 123456789 (number, required) - Fill request Id.
+    + filled_form_id: 654321 (number, required) - Filled Form ID
+
++ Response 200
+
+        Success. PDF file to download
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### List Recipient`s Attached Additional Documents [GET /v2/fillable_forms/{link_to_fill_id}/filled_forms/{filled_form_id}/additional_documents]
+Returns a list of a LinkToFill recipient`s attached additional documents.
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + link_to_fill_id: 123456789 (number, required) - Fill request Id.
+    + filled_form_id: 654321 (number, required) - Filled Form ID
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes
+        + items (array[Additional_documents_response])
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### List Information of Recipient`s Attached Additional Document [GET /v2/fillable_forms/{link_to_fill_id}/filled_forms/{filled_form_id}/additional_documents/{additional_document_id}]
+Returns information about one LinkToFill recipient`s attached additional document.
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + link_to_fill_id: 123456789 (number, required) - Fill request Id.
+    + filled_form_id: 654321 (number, required) - Filled Form ID.
+    + additional_document_id: 4567 (number, required) - Attached additional document ID
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Additional_documents)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Download Filled Form`s Additional Document [GET /v2/fillable_forms/{link_to_fill_id}/filled_forms/{filled_form_id}/additional_documents/{additional_document_id}/download]
+Downloads a file of a LinkToFill filled form`s additional document.
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + link_to_fill_id: 123456789 (number, required) - Fill request Id.
+    + filled_form_id: 654321 (number, required) - Filled Form ID.
+    + additional_document_id: 4567 (number, required) - Attached additional document ID
+
++ Response 200
+
+            Success. Attached file to download.
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Download All Filled Form`s Additional Documents [GET /v2/fillable_forms/{link_to_fill_id}/filled_forms/{filled_form_id}/additional_documents/download]
+Downloads a zip-file of all LinkToFill filled form`s additional documents. This method can give three statuses: Creating a Job with Job ID, Waiting (if zip is still in progress) or Zip content (if files ready to export).
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + link_to_fill_id: 123456789 (number, required) - Fill request Id.
+    + filled_form_id: 654321 (number, required) - Filled Form ID.
+
++ Response 200
+
+            Success. Attached zip-file to download.
+
++ Response 202 (application/json)
+
+    Accepted - Creating a Job with Job ID
+
+    + Attributes (Documents_job)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+# Group Tokens
+Identity tokens is a mechanism which let&rsquo;s to associate any information with specific user action, such as form filling or signature. Token functionality is popular for use cases when customers would like to uniquely identify users without creating multiple accounts in PDFfiller.
+
+**Sample Token workflow**
+
+* Execute API calls to generate unique user tokens for specific form. Submit additional user information as part of token generation request to associate user with specific token.
+
+```curl
+curl -X "POST" "https://api.pdffiller.com/v2/tokens" \
+    -H "Authorization: Bearer gasyus67c5YwLKRhvhvjgchcmhchcmc5YwLKRhvhvjgchcmc5YwLKRhvhvjgchcmhchcmc5YwLKRhvhvjgchcmc5YwLKRhvhvjgchcmhchcmc5YwLKRhvhvjgchcmc5YwLKRhvhvjgchcmhchcmc5YwLKRhvhvjgchcmc5YwLKRhvhvjgchcmhchcmc5YwLKRhvhvjgchcmc5YwLKRhvhvjgchcmhchcmc5YwLKRhvhvjgchcmahtytwentj" \
+    -d "{\"data\":{\"user_id\":\"1323\"}}"
+```
+
+**Get hash value from the response**
+```json
+    {
+        "id": "2",
+        "hash": "gFu5rZsEZFeRRENOS635U6PA",
+        "data": {
+            "user_id": "1323"
+        }
+    }
+```
+
+* Generate Fillable Form and share it by link as described in [fillable forms examples](#link_to_fill).
+* Send urls to your users along with associated tokens, i.e. `http://pdf.ac/abcdefg?token=<token_hash>`
+* Once form is filled by user, it will be associated with token and you retrieve form information along with user identification data through API to identify users:
+
+```curl
+curl -X "GET" "https://api.pdffiller.com/v2/fillable_forms/123456789/filled_forms" \
+     -H "Authorization: Bearer c5YwLKRhvhvjgchcmhc5YwLKRhvhvjgchcmhchcmc5YwLKRhvhvjgchcmhchcmcc5YwLKRhvhvjgchc5YwLKRhvhvjgchcmhchcmc5YwLKRhvhvjgchcmfxcpccc5YwLKRhvhvjgchcmhchcmc5YwLKRhvhvjgchcmc5YwLKRhvhvjgchcmhchcmc5YwLKRhvhvjgchcmcc5YwLKRhvhvjgchcmhchcmc5YwLKRhvhvjgchcmKk6Zv1GpntjXqSCTtEVTKEa9TXy2KF1Wv"
+```
+**Filled document information associated with token**
+```json
+{
+    "items": [
+        {
+            "id": 15745,
+            "document_id": 5034834,
+            "token": {
+                "id": 1,
+                "user_id": 19249055,
+                "hash": "sOhHRbDEqkCweFH1DrcJV64o64nv67dsds",
+                "data": {
+                    "user_id": "123"
+                }
+            }
+        }
+    ]
+}
+```
+
+## List All Tokens [GET /v2/tokens{?per_page,page,order,order_by}]
+Returns a list of all tokens.
++ Request (application/x-www-form-urlencoded)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + `per_page`: `15` (number, optional) - Filter by quantity of tokens on the page
+        + Default: `15`
+    + `page`: `1` (number, optional) - Filter by page
+        + Default: `1`
+    + `order_by`: `id` (enum[string], optional)- Filter for sort by selected property
+        + Members
+            + `id`
+            + `hash`
+        + Default: `id`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (List)
+        + items (array[Token_info])
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Creates New Token [POST /v2/tokens]
+Creates a new token.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Tokens_post)
+
++ Response 200 (application/json)
+
+    Success - Information about created token
+
+    + Attributes (Token_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Created Token Information [GET /v2/tokens/{token_id}]
+Information about a created token.
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + token_id: 1234 (string, required) - Token Id
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Token_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Update Token [PUT /v2/tokens/{token_id} ]
+Updates a token.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Tokens_put)
+
++ Parameters
+    + token_id: 1234 (string, required) - Token Id
+
++ Response 200 (application/json)
+
+    Success - Information about updated token
+
+    + Attributes (Token_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Delete Token [DELETE /v2/tokens/{token_id}  ]
+Deletes a token item.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + token_id: 1234 (number, required) - Token Id.
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Delete_response)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+# Group Signature Requests
+
+## Signature Requests Inbox Folder [/v2/signature_requests/inbox]
+
+### List All Document Signature Requests In Inbox Folder [GET /v2/signature_requests/inbox{?status,date_from,date_to,per_page,page,order,order_by}]
+Retrieves a list of all document signature requests in the inbox folder.
++ Request (application/x-www-form-urlencoded)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + `status`: `in_progress` (enum[string], optional) - Filter by Signature Requests status
+        + Members
+            +  `in_progress`
+            +  `sent`
+            +  `signed`
+    + date_from: `2016-12-31` (string, optional) - Filter by date from.
+    + date_to: `2017-12-31` (string, optional) - Filter by date to.
+    + `per_page`: `15` (number, optional) - Filter by quantity of  document signature requests on the page
+        + Default: `15`
+    + `page`: `1` (number, optional) - Filter by page
+        + Default: `1`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+    + `order_by`: `status` (enum[string], optional) - Filter for sort by selected field
+        + Members
+            + `signature_request_id`
+            + `document_id`
+            + `date_created`
+            + `date_signed`
+            + `method`
+            + `status`
+        + Default: `signature_request_id`
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Send_to_sign_inbox_response)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Signature Request Inbox Download [GET /v2/signature_requests/inbox/download{?status,date_from,date_to,per_page,page,order}]
+Downloads all documents which a sender has requested your signature for in a .zip archive.
++ Request (application/x-www-form-urlencoded)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + status: `in_progress` (enum[string], optional) - Filter by Signature Requests status
+        + Members
+            +  `in_progress`
+            +  `sent`
+            +  `signed`
+    + date_from: `2016-12-31` (string, optional) - Filter by date from.
+    + date_to: `2017-12-31` (string, optional) - Filter by date to.
+    + `per_page`: `15` (number, optional) - Filter by quantity of documents on the page
+        + Default: `15`
+    + `page`: `1` (number, optional) - Filter by page
+        + Default: `1`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+
++ Response 200
+
+            Success. Attached zip-file to download.
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Signature Request [/v2/signature_requests]
+
+### List All Document Signature Requests [GET /v2/signature_requests{?date_from,date_to,per_page,page,order,order_by}]
+Retrieves a list of all document signature requests.
++ Request (application/x-www-form-urlencoded)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + `date_from`: `2016-12-31` (string, optional) - Filter by date from.
+    + `date_to`: `2017-12-31` (string, optional) - Filter by date to.
+    + `per_page`: `15` (number, optional) - Filter by quantity of a document signature requests on the page
+        + Default: `15`
+    + `page`: `1` (number, optional) - Filter by page
+        + Default: `1`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+    + `order_by`: `status` (enum[string], optional) - Filter for sort by selected field
+        + Members
+            + `signature_request_id`
+            + `document_id`
+            + `date_created`
+            + `date_signed`
+            + `method`
+            + `status`
+            + `envelope_name`
+        + Default: `signature_request_id`
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (List)
+        + items (array[Send_to_sign_response])
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### New Signature Request - standard SendToSign document [POST]
+Creates a new Signature request. Two Signature methods supported: SendToEach and SendToGroup. The SendToGroup method requires envelope_name, sign_in_order and role parameters.
++ Request  (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Send_to_sign_attr_post)
+
++ Response 200 (application/json)
+
+    Success - Information about created Signature request item
+
+    + Attributes (Send_to_sign_response)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### New Signature Request - Uses the completed fields of an existing document to fill the fillable fields of a new SendToSign document [POST /v2/signature_requests ]
+Creates a new Signature request. Two Signature methods supported: SendToEach and SendToGroup. The SendToGroup method requires envelope_name, sign_in_order and role parameters.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Send_to_sign_attr_post_prefill)
+
++ Response 200 (application/json)
+
+    Success - Information about created Signature request item
+
+    + Attributes (Send_to_sign_response)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### New Signature Request - Converts a downloaded document to a SendToSign form [POST /v2/signature_requests  ]
+Creates a new Signature request. Two Signature methods supported: SendToEach and SendToGroup. The SendToGroup method requires envelope_name, sign_in_order and role parameters.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Send_to_sign_attr_post_file)
+
++ Response 200 (application/json)
+
+    Success - Information about created Signature request item
+
+    + Attributes (Send_to_sign_response)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Signature Request Information by Signature Request ID [GET /v2/signature_requests/{signature_request_id}]
+Retrieves signature request information based on the signature request ID.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + signature_request_id: 55577 (number, required) - Signature Request Id.
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Send_to_sign_response)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Cancel Specified Signature Request [DELETE /v2/signature_requests/{signature_request_id}]
+Cancels a signature request for the specified SendToSign ID.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + signature_request_id: 55577 (number, required) - Signature Request Id.
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Delete_response)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Signature Request Certificate by Signature Request ID [GET /v2/signature_requests/{signature_request_id}/certificate]
+Returns a signature request certificate by signature request id.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + signature_request_id: 55577 (number, required) - Signature Request Id.
+
++ Response 200 (application/json)
+
+            Success - signature request certificate
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Signed Document by Signature Request ID [GET /v2/signature_requests/{signature_request_id}/signed_document]
+Returns a signed document by Signature request id.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + signature_request_id: 55577 (number, required) - Signature Request Id.
+
++ Response 200 (application/json)
+
+            Success - returns signed document
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Signature Requests Recipients [/v2/signature_requests/{signature_request_id}/recipients]
+
+### Recipient(s) and Signature Status [GET /v2/signature_requests/{signature_request_id}/recipients{?per_page,page,order,order_by}]
+Returns information about sendtosign recipients and signature status.
++ Request (application/x-www-form-urlencoded)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + signature_request_id: 55577 (number, required) - Signature Request Id.
+    + `per_page`: `15` (number, optional) - Filter by quantity of recipients on the page
+        + Default: `15`
+    + `page`: `2` (number, optional) - Filter by page
+        + Default: `1`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+    + `order_by`: `name` (enum[string], optional)- Filter for sort by selected field
+        + Members
+            + `id`
+            + `user_id`
+            + `name`
+            + `email`
+            + `date_created`
+            + `date_signed`
+            + `status`
+            + `roles` - available only for 'sendtogroup' method
+        + Default: `id`
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (List)
+        + items (array[Recipients_response])
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Add Additional Recipient [POST]
+Adds an additional recipient to a sendtosign request.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (New_S2S_recipient)
+
++ Parameters
+    + signature_request_id: 55577 (number, required) - Signature Request Id.
+
++ Response 200 (application/json)
+
+    Success - Information about changed Signature request item
+
+    + Attributes (Send_to_sign_response)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Recipient and Signature Status [GET /v2/signature_requests/{signature_request_id}/recipients/{recipient_id}]
+Returns information about a sendtosign recipient and signature status.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + signature_request_id: 55577 (number, required) - Signature Request Id.
+    + recipient_id: 12345 (number, required) - Recipient Id.
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Recipients_response)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Remind Recipient about SendToSign Request [PUT /v2/signature_requests/{signature_request_id}/recipients/{recipient_id}/remind]
+Reminds a sendtosign recipient about the sendtosign request.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + signature_request_id: 55577 (number, required) - Signature Request Id.
+    + recipient_id: 12345 (number, required) - Recipient Id.
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes
+        + message: `An email reminder has been sent to this recipient.` (string)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Additional Documents [/v2/signature_requests/{signature_request_id}/recipients/{recipient_id}/additional_documents]
+
+### Recipient`s Attached Additional Document(s) [GET]
+Returns information about sendtosign recipient`s attached additional documents.
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + signature_request_id: 55577 (number, required) - Signature Request Id.
+    + recipient_id: 12345 (number, required) - Recipient Id.
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes
+        + items (array[Additional_documents_response])
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Recipient`s Attached Additional Document [GET/v2/signature_requests/{signature_request_id}/recipients/{recipient_id}/additional_documents/{additional_document_id}]
+Returns information about sendtosign recipient`s attached additional document.
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + signature_request_id: 55577 (number, required) - Signature Request Id.
+    + recipient_id: 12345 (number, required) - Recipient Id.
+    + additional_document_id: 4567 (number, required) - Attached additional document ID
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Additional_documents)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Download Recipient`s Additional Document [GET /v2/signature_requests/{signature_request_id}/recipients/{recipient_id}/additional_documents/{additional_document_id}/download]
+Downloads a file of a sendtosign recipient`s additional document.
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + signature_request_id: 55577 (number, required) - Signature Request Id.
+    + recipient_id: 12345 (number, required) - Recipient Id.
+    + additional_document_id: 4567 (number, required) - Attached additional document ID
+
++ Response 200
+
+            Success. Attached file to download.
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+### Download All Recipient Additional Documents [GET /v2/signature_requests/{signature_request_id}/recipients/{recipient_id}/additional_documents/download]
+Downloads a zip-file of all additional documents for a sendtosign recipient. This method can give three statuses: Creating a Job with Job ID, Waiting (if zip is still in progress) or Zip content (if files ready to export).
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + signature_request_id: 55577 (number, required) - Signature Request Id.
+    + recipient_id: 12345 (number, required) - Recipient Id.
+
++ Response 200
+
+            Success. Attached zip-file to download.
+
++ Response 202 (application/json)
+
+    Accepted - Creating a Job with Job ID
+
+    + Attributes (Documents_job)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+# Group Applications
+
+## List All Applications [GET /v2/applications{?per_page,page,order,order_by}]
+Returns a list of all applications.
++ Request (application/x-www-form-urlencoded)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + `per_page`: `15` (number, optional) - Filter by quantity of applications on the page
+        + Default: `15`
+    + `page`: `2` (number, optional) - Filter by page
+        + Default: `1`
+    + `order_by`: `name` (enum[string], optional)- Filter for sort by selected field
+        + Members
+            + `id`
+            + `secret`
+            + `name`
+            + `description`
+            + `domain`
+            + `logo`
+            + `redirect_uri`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+
++ Response 200 (application/json)
+
+    Success - list of applications
+
+    + Attributes (List)
+        + items (array[Applications_info])
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    Forbidden - access to resource forbidden for this application
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Create New Application [POST /v2/applications]
+Creates a new application. Parameters for all-domains can be 0/1 or true/false.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Application_attr_post)
+
++ Response 200 (application/json)
+
+    Success - Information about created application
+
+    + Attributes (Applications_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Created Application Information [GET /v2/applications/{application_id}]
+Lists information about the created application.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + application_id: `abc123def456` (string, required) - Id of an application.
+
++ Response 200 (application/json)
+
+    Success - Information about application
+
+    + Attributes (Applications_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Application Update [PUT /v2/applications/{application_id} ]
+Updates application. Parameters for all-domains can be 0/1 or true/false.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + application_id: `abc123def456` (string, required) - Id of an application.
+
++ Attributes (Application_attr_put)
+
++ Response 200 (application/json)
+
+    Success - Information about chenged application
+
+    + Attributes (Applications_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Delete Application [DELETE /v2/applications/{application_id}  ]
+Deletes application item.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + application_id: `abc123def456` (string, required) - Id of an application.
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Delete_response)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Application Users [GET /v2/applications/{application_id}/users{?per_page,page,order,order_by}]
+Retrieves a list of users who authorized with the requested application
++ Request (application/x-www-form-urlencoded)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + application_id: `abc123def456` (string, required) - Id of an application.
+    + `per_page`: `15` (number, optional) - Filter by quantity of applications on the page
+        + Default: `15`
+    + `page`: `1` (number, optional) - Filter by page
+        + Default: `1`
+    + `order_by`: `email` (enum[string], optional)- Filter for sort by selected field
+        + Members
+            + `user_id`
+            + `email`
+        + Default: `user_id`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+
++ Response 200 (application/json)
+
+    Success - list of applications
+
+    + Attributes (List)
+        + items (array[Application_users_info])
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    Forbidden - access to resource forbidden for this application
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+# Group Callbacks
+<a name="callbacks_endpoints"></a>
+
+## Create New Callback [POST /v2/callbacks]
+Creates a new callback associated with a specific document event.
+
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Callback_attr_post)
+
++ Response 200 (application/json)
+
+    Success - information about created callback
+
+    + Attributes (Callback_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## List Callback Events [GET /v2/callbacks{?per_page,page,order,order_by}]
+Returns a list of callback events.
+
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + `per_page`: `15` (number, optional) - Filter by quantity of callbacks on the page
+        + Default: `15`
+    + `page`: `1` (number, optional) - Filter by page
+        + Default: `1`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+    + `order_by`: `document_id` (string, optional) - Filter for sort by custom property
+        + Default: `id`
+
++ Response 200 (application/json)
+
+    Success - list of callback events
+
+    + Attributes (List)
+        + items (array[Callback_info])
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Event Callback Information [GET /v2/callbacks/{event_callback_id}]
+Returns information about a specific callback by callback id.
+
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + event_callback_id: `abc123def` (string, required) - Event callback Id
+
++ Response 200 (application/json)
+
+    Success - information about a callback
+
+    + Attributes (Callback_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Update Callback [PUT /v2/callbacks/{event_callback_id} ]
+Updates a callback.
+
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Callback_attr_put)
+
++ Parameters
+    + event_callback_id: `abc123def` (string, required) - Event callback Id
+
++ Response 200 (application/json)
+
+    Success - information about a callback
+
+    + Attributes (Callback_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Delete Callback [DELETE /v2/callbacks/{event_callback_id}  ]
+Deletes a callback.
+
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + event_callback_id: `abc123def` (string, required) - Event callback Id
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Delete_response)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+# Group Callbacks Global
+Global Callback applies to all document events such as LinkToFill and SendToSign forms as well as other generated documents using the fillable constructor.
+
+Once a global callback has been created, there is no need to specify a callback_url. When a fillable form such as LinkToFill, SendToSign or Template Constructor is created, a callback_url is automatically added to the request and shown in that form's response.
+
+Global Callbacks do not have an "expiration date" and are valid until they are updated or deleted.
+
+***Note:** The Global Callback endpoint is available for use on the V1 and V2 APIs, but it may only be managed (viewed / created / updated / deleted) on V2.*
+
+To create another callback or a new callback simply add a link to another resource in the body of the request or use the [Callback Endpoint](#callbacks_endpoints)
+
+## Global Callback Event [GET /v2/callbacks/global]
+Returns a information about callback event.
+
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Response 200 (application/json)
+
+    Success - information about a callback
+
+    + Attributes (Callback_global_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Update Global Callback [PUT /v2/callbacks/global ]
+Updates a callback.
+
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Callback_global_post)
+
++ Response 200 (application/json)
+
+    Success - information about a callback
+
+    + Attributes (Callback_global_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Delete Global Callback [DELETE /v2/callbacks/global  ]
+Deletes a callback.
+
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Delete_response)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+# Group Folders
+
+## List All Folders [GET /v2/folders{?per_page,page,order,order_by}]
+Retrieves a list of folders.
++ Request (application/x-www-form-urlencoded)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + `per_page`: `15` (number, optional) - Filter by quantity of folders on the page
+        + Default: `15`
+    + `page`: `2` (number, optional) - Filter by page
+        + Default: `1`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+    + `order_by`: `name` (string, optional) - Filter for sort by custom property
+        + Default: `folder_id`
+
++ Response 200 (application/json)
+
+    Success - list of folders
+
+    + Attributes (List)
+        + items (array[Folder_one])
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    Forbidden - access to resource forbidden for this resource
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Create A New Folder [POST /v2/folders]
+Creates a new folder. The folder name must contain numbers, English letters or special characters: ( ) _ .
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Folder_post)
+
++ Response 200 (application/json)
+
+    Success - Information about created folder
+
+    + Attributes (Folder_one)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Folder Information [GET /v2/folders/{folder_id}]
+Retrieves information about a created folder.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + folder_id: 123 (number, required) - Id of a folder.
+
++ Response 200 (application/json)
+
+    Success - Information about created folder
+
+    + Attributes (Folder_one)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Updates Folder Name [PUT /v2/folders/{folder_id} ]
+Updates a folder's name.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + folder_id: 123 (number, required) - Id of a folder.
+
++ Attributes (Folder_put)
+
++ Response 200 (application/json)
+
+    Success - Information about changed folder
+
+    + Attributes (Folder_one)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Delete Folder [DELETE /v2/folders/{folder_id}  ]
+Deletes a folder item.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + folder_id: 123 (number, required) - Id of a folder.
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Delete_response)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+# Group Custom Logos
+
+## List Added Logos [GET /v2/custom_branding/custom_logo{?per_page,page,order,order_by}]
+Retrieves a list of added user logos.
++ Request (application/x-www-form-urlencoded)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + `per_page`: `15` (number, optional) - Filter by quantity of custom logos on the page
+        + Default: `15`
+    + `page`: `1` (number, optional) - Filter by page
+        + Default: `1`
+    + `order`: `desc` (enum[string], optional) - Sort Method
+        + Members
+            + `asc`
+            + `desc`
+        + Default: `desc`
+    + `order_by`: `updated` (string, optional) - Filter for sort by custom property
+        + Default: `id`
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (List)
+        + items (array[Custom_logo_info])
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## New Logo [POST /v2/custom_branding/custom_logo]
+Adds a new custom logo from a url or multipart.
++ Request Upload Logo from url (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
+    + Attributes (Custom_logo_post)
+
++ Response 200 (application/json)
+
+    Success - Information about created logo
+
+    + Attributes (Custom_logo_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Custom Logo Information [GET /v2/custom_branding/custom_logo/{custom_logo_id}]
+Retrieves information about an added custom logo.
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + custom_logo_id: 1234 (string, required) - Custom logo Id
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Custom_logo_info)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+## Delete Custom Logo [DELETE /v2/custom_branding/custom_logo/{custom_logo_id} ]
+Deletes user custom logo item.
++ Request
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Parameters
+    + custom_logo_id: 1234 (number, required) - Custom logo Id
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Delete_response)
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+# Group Users
+
+## User Information [GET /v2/users/me]
+Returns user information.
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer Token
+
++ Response 200 (application/json)
+
+    Success
+
+    + Attributes (Users_info)
+
++ Response 401 (application/json)
+
+    User authentication error
+
+    + Attributes (Error_response)
+
++ Response 403 (application/json)
+
+    403 Forbidden - Access to this resource on the server is denied
+
+    + Attributes (Error_response)
+
++ Response 404 (application/json)
+
+    The server has not found anything matching the Request-URI
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+# Group Tools
+
+## Merge [/v2/tools/merge]
+
+### Merge documents [POST /v2/tools/merge{?clear_cache}]
+Merge up to five docs into a single document.
+
++ Parameters
+    + clear_cache: true (boolean, optional) - Clear cache to begin a new merge with same params
+
+
++ Request (application/json)
+
+    + Headers
+
+            Authorization: Bearer
+
+    + Attributes (Merge_request)
+
++ Response 200 (application/json)
+
+    Success - merged document
+
+    + Attributes (Document_info_with_status)
+
++ Response 211 (application/json)
+
+    The file is not ready at the moment. Please resend request later
+
+    + Body
+
+            {
+                "status": "Running"
+            }
+
+    + Schema
+
+            {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "integer"
+                }
+              }
+            }
+
++ Response 400 (application/json)
+
+    Bad request - request validation error
+
+    + Attributes (Error_response)
+
++ Response 401 (application/json)
+
+    Unauthorized - access application is invalid or doesn't have access privileges to requested resource
+
+    + Attributes (Error_response)
+
++ Response 408 (application/json)
+
+    Request Timeout - Unable to complete request, please confirm that the operation has completed or try again later
+
+    + Attributes (Error_response)
+
++ Response 409 (application/json)
+
+    Merge conflict - previous merge request is still processing
+
+    + Attributes (Error_response)
+
++ Response 500 (application/json)
+
+    The server encountered an unexpected condition which prevented it from fulfilling the request
+
+    + Attributes (Error_response)
+
+
+# Data Structures
+
+## `StandardFilters`
++ `perPage`: 15 (number, optional) - Filter by quantity of applications on the page
+    + Default: `15`
++ `page`: 1 (number, optional) - Filter by page
+    + Default: `1`
++ `order`: `desc` (enum[string], optional) - Sort Method
+    + Members
+        + `asc`
+        + `desc`
+    + Default: `desc`
+
+## `Error_response` (object)
++ `errors`(array[Error_message])
+
+## `Error_message` (object)
++ `message`: `string`(string)
++ `id`: `string`(string)
+
+## `Delete_response` (object)
++ `total`: 0 (number)
++ `message`: `string`(string)
+
+## `List` (object)
++ `total`: 1 (number, required)
+    + Default: 1
++ `current_page`: 1 (number, required)
+    + Default: 1
++ `per_page`: 15 (number, required)
+    + Default: 15
++ `prev_page_url`: `string` (string, required)
+    + Default: ``
++ `next_page_url`: `string` (string, required)
+    + Default: ``
+
+## `Authenticate_info` (object)
++ `token_type`: Bearer (string, required) - Access token type. Only Bearer supported
+    + Default: Bearer
++ `expires_in`: `86400` (number, required) - Access token lifetime in seconds
+    + Default: 86400
++ `access_token`: `OWJlZTQxNWNmNzA1MTJmMTFkOWE3NjNhZjRjMTZkMDUyZTUwMDh` (string, required) - Access token to send with every API request
++ `refresh_token`: `ci+Bb+H9Kok948mXKsmGU8uxAvNODdKrexJjMeCOgP9nQ2EE8Py6/HP` (string, required) - Token which refreshes access token
+
+## `Password_grant` (object)
++ `grant_type`: `password` (string, required) - Authentication grant type
++ `client_id`: `your_client_id` (string, required)
++ `client_secret`: `your_client_secret` (string, required)
++ `username`: `Username@mail.com` (string, required) - `User email, required for grant type 'password'`
++ `password`: `rty7896ce` (string, required) - `Password of user account, required for grant type 'password'`
+
+## `Refresh_token_grant` (object)
++ `grant_type`: `refresh_token` (string, required) - Authentication grant type
++ `client_id`: `your_client_id` (string, required)
++ `client_secret`: `your_client_secret` (string, required)
++ `refresh_token`: `111Loooong111refresh111token111string` (string, required) - Refresh token from other OAuth response. Can use once only, required for grant type ‘refresh_token’
+## `Applications_info` (object)
++ `id`: `fd203a534c31ad20` (string, required) - Client Id
++ `secret`: `9MAoB51ooCW8yKAiuyszuNJyN21C9Oui` (string, required) - Client Secret
++ `name`: `Custom name` (string, required) - Application Name
++ `description`: `application description` (string, required) - Application Description
++ `domain`: `domain.com` (string, required) - Embedded JS Client domain.
++ `logo`: `logo url` (string, required) - The application logo URL
++ `redirect_uri`: `http://www.domain.com` (string, required) - Application Domain
++ `embedded_client` (object)
+    + `domain`: `domain.com` (string, required) - Domain, where Client will be placed
+    + `allow_all_domains`: `true` (boolean, required) - Allow all domains flag.
+        + Default: false
+
+## `Embedded_client` (object, required)
++ `domain`: `domain.com` (string, required) - Domain, where Client will be placed
++ `allow_all_domains`: `true` (boolean, required) - Allow all domains flag.
+    + Default: false
+
+## `Application_attr_post`
++ `name`: `application name` (string, required) - Application Name
++ `description`: `application description` (string, required) - Application Description
++ `domain`: `https://domain.com` (string, required) - Application Domain for authorization by grant type authorization_code
++ `logo`: `http://static.pdffiller.com/img/icons/pdffiller-32x32.png` (string, optional) - PNG, JPG file. The input can be type of: base64 string, file or url. Only square images.
++ `embedded-domain`: `https://domain.com` (string, optional) - Domain, where Client will be placed
++ `all-domains`: true (boolean, optional) - Allow all domains flag. All domain parameters will be: 0/1 (true/false)
+
+## `Application_attr_put`
++ `name`: `application name` (string, optional) - Application Name
++ `description`: `application description` (string, optional) - Application Description
++ `domain`: `https://domain.com` (string, optional) - Application Domain for authorization by grant type authorization_code
++ `logo`: `http://static.pdffiller.com/img/icons/pdffiller-32x32.png` (string, optional) - PNG, JPG file. The input can be type of: base64 string, file or url. Only square images.
++ `embedded-domain`: `https://domain.com` (string, optional) - Domain, where Client will be placed
++ `all-domains`: true (boolean, optional) - Allow all domains flag. All domain parameters will be: 0/1 (true/false)
+
+## `Application_users_info` (object)
++ `user_id`: `777` (string, required) - Identifier used (by a user) to authorize with the given application client_id.
++ `email`: `developer@example.com` (string, required) - Email used (by a user) to authorize with the given application client_id.
+
+
+## `Callback_info` (object)
++ `id`: 1 (number)
+    + Default: 1
++ `document_id`: 1 (number)
+    + Default: 1
++ `event_id`: `fill_request.done` (string)
+    + Default: fill_request.done
++ `callback_url`: `http://api.pdffiller.com` (string)
+    + Default: http://api.pdffiller.com
+
+## `Callback_attr_post`
++ `event_id`: `fill_request.done` (string) - `ID of an event which triggers a callback. Supported event ids: fill_request.done | signature_request.done | constructor.done`
++ `callback_url`: `http://url.com` (string, required) - Callback destination url
++ `document_id`: 123456789 (number, required) - Document id to associate callback information with
+
+## `Callback_attr_put`
++ `event_id`: `fill_request.done` (string) - ID of an event which triggers a callback. Supported event ids: fill_request.done | signature_request.done | constructor.done'
++ `callback_url`: `http://url.com` (string) - Callback destination url
+
+## `Callback_global_info` (object)
++ `callback_url`: `http://api.pdffiller.com` (string)
+
+## `Callback_global_post` (object)
+ + `callback_url`: `http://url.com` (string) - Callback destination url
+
+## `Template_post`
++ `file`: `https://www.irs.gov/pub/irs-pdf/fw9.pdf` (string, required)
++ `name`: `some_name_for_new_template` (string, optional)
++ `folder_id`: 0 (number, optional)
+    + Default: 0
+
+## `Template_copy`
++ `name`: `some_name_for_new_template` (string, optional)
++ `action`: `copy` (string, required)
++ `folder_id`: 0 (number, optional)
+    + Default: 0
+
+## `Template_put`
++ `name`: `new_file_name` (string, optional)
++ `folder_id`: 0 (number, optional)
+    + Default: 0
+
+## `Constructor_created` (object)
++ `document_id`: 1111111111 (number) - Template id which was shared
++ `hash`: `string` (string) - Hash for shared template
++ `url`: `some url` (string) - Permalink to edit shared template
++ `short_url`: `short link` (string) - Short link  to edit shared template
++ `custom_logo_id`: 4526 (number) - Document custom logo id
++ `redirect_url`: `https://domain.com` (string) - Redirect uri
+
+## `Fillable_template_field` (object)
++ `type`: `text` (string, required)
++ `name`: `YourCustomFieldName` (string, required)
++ `initial`: `default value` (string, required)
+    + Default: ``
++ `required`: `true` (boolean, required)
+    + Default: true
++ `label`: `Text for user's`(string, optional)
++ `fillable`: `true` (boolean, required)
++ `maxLines`: 2 (number, optional) - Only for text, number, date, dropdown field types
+    + Default: `1000`
++ `maxChars`: 200 (number, optional) - Only for text, number, date, dropdown field types
+    + Default: `5000`
++ `list`: `First Choice`, `Second Choice` (array, required) - Only for dropdown field type
++ `allowCustomText`: `true` (boolean, required) - Only for dropdown field type
+    + Default: `false`
++ `radioGroup`: `GroupName` (string, optional) - Only for checkmark field type. Unites checkmarks in one group
++ `format`: `yyyy-MM-dd` (string, required) - Only for date field type
+    + Default: `MM/dd/yyyy`
++ `value`: `some_value` (string, required) - Value for fillable field if exists
+    + Default: ``
+
+## `Template_info` (object)
++ `id`: 12345678 (number)
++ `name`: `File_name.extension` (string)
++ `type`: `docx` (string) - Original document extension. Document(s) uploaded to pdffiller will be converted to .pdf
++ `status`: `FINISHED` (enum[string])
+    + Members
+        + `RECEIVED`
+        + `FINISHED`
+        + `FAILED`
++ `created`: 1457222400 (number)
+    + Default: 0
++ `updated`: 1457222400 (number)
++ `fillable`: `false` (boolean, required)
++ `folder` (object)
+    + `folder_id`: 12345678 (number)
+        + Default: 0
+    + `name`: `My_folder` (string)
+        + Default: `Unsorted`
+
+## `Folder_info` (object)
++ `folder_id`: 12345678 (number)
+    + Default: 0
++ `name`: `My_folder` (string)
+    + Default: `Unsorted`
+
+## `Role_info` (object)
++ `id`: 777 (number)
++ `document_id`: 11111111 (number)
++ `role_name`: `Developer` (string)
++ `order`: 0 (number)
+
+## `Constructor_list` (object)
++ `items` (array[Document_hash])
++ `callback_urls`: `[your_custom_or_global_callback_url, another_custom_or_global_callback_url]` (array)
+
+## `Document_hash` (object)
++ `hash`: `hash_string` (string)
++ `expiration`: `2017-01-01 00:00:00` (string) - Date of end-of-life for the link
++ `url`: `https://url.com/en/hash_string.htm` (string)
++ `custom_logo_id`: 4526 (number) - Document custom logo id
++ `redirect_url`: `https://domain.com` (string) - Redirect uri
+
+## `Template_values` (object)
++ `Text_1`: `some_string` (string, optional)
++ `Number_1`: 12345 (number, optional)
++ `Number_2`: 67890 (number, optional)
++ `Checkbox_1`: `ON` (enum[string], optional)
+    + Members
+        + `ON`
+        + `OFF`
++ `Date_1`: `02/07/2017` (string, optional)
++ `Dropdown_1`: `string` (string, optional)
+
+## `Fillable_fields` (object)
++ `Field_name_1`: `Some Value` (string, optional)
++ `Field_name_2`: `Some Other Value` (string, optional)
+
+## `Fill_template_attr`
++ `fillable_fields` (object)
+    + `Field_name_1`: `Some Value` (string, optional)
+    + `Field_name_2`: `Some Other Value` (string, optional)
++ `name`: `new_name_for_file` (string, optional) - Name created for a newly filled document
++ `action`: `fill` (string, optional)
++ `folder_id` (number, optional)
+    + Default: 0
+
+## `Constructor_post`
++ `expire`: 10 (number, optional) - Number of days left until link expires. Max value - 1000
+    + Default: 5
++ `callback_url` (string, optional) - Callback destination url
++ `custom_logo_id`: 4526 (number, optional) - Document custom logo id
++ `redirect_url`: `https://domain.com` (string, optional) - Redirect uri
+
+## `Previews_template` (object)
++ `items` (array)
+    + `page_number` (string)
+    + `image` (string) - base64 encode string
++ `total` (number)
+
+## `Folder_one` (object)
++ `folder_id`: 1111 (number, required)
++ `name`: `Custom name` (string, required)
++ `documents_count`: 1 (number, required)
++ `folders_count`: 0 (number, required)
++ `parent_id`: 2222 (number, required)
+
+## `Folder_post`
++ `name`: `folder_name`  (string, required) - The folder name must contain numbers, letters or the characters: ( ) _ .
++ `parent_id`: 0 (number, optional) - Id of a parent folder
+
+## `Folder_put`
++ `name`: `new_folder_name`  (string, optional) - The folder name must contain numbers, letters or the characters: ( ) _ .
+
+## `Folder_info_for_document` (object)
++ `id`: 12345678 (number)
+    + Default: 0
++ `name`: `My_folder` (string)
+
+## `Fillable_forms_info` (object)
++ `fillable_form_id`: 123456 (number, required) - Id of the document template for linkToFill operations
++ `document_name`: `Document.pdf` (string, required) - The filename of the document template for linkToFill operations
++ `access` (enum[string], required) - Access level for the fill request document. Full - read|write|sign.  Signature - read|sign.
+    + Members
+        + `full`
+        + `signature`
+    + Default: `full`
++ `status` (enum[string], required) - Document access permission.
+    + Members
+        + `public` - open to everyone
+        + `private` - open to the document owner only
+    + Default: `public`
++ `email_required`: `true` (boolean, required) - Email required
+    + Default: false
++ `allow_downloads`: `false` (boolean, required) - Allow to download
+    + Default: false
++ `redirect_url`: `https://www.pdffiller.com` (string, required) - Redirect uri
++ `name_required`: `true` (boolean, required) - Name required
+    + Default: false
++ `custom_message`: `Some custom message` (string, required) - LinkToFill custom message
++ `filled_forms_count`: 0 (number, required) - Filled forms count
+    + Default: 0
++ `notification_emails` (array[Notification_emails], required) - LinkToFill notification emails
++ `notifications` (enum[string], required) - The notifications mode
+    + Members
+        + `disabled` - for no notifications
+        + `enabled` - for notifications only
+        + `with_pdf` - for notifications with PDF copy of document
++ `sender_notifications`: false (boolean)
+    + Default: true
++ `url`: `https://pdf.ac/aaa4a` (string, required) - Document access url
++ `enforce_required_fields`: `true` (boolean, required) - Prevent closing document before filling all fields
+    + Default: false
++ `custom_logo_id`: 1234 (number, required) - Document custom logo id
+    + Default: 0
++ `welcome_screen`: `false` (boolean, required) - Shows welcome agreement each time when user will open LinkToFill
+    + Default: true
++ `additional_documents`  (array[Additional_documents_response], required) - Additional documents required after filling the document. Max count 5.
++ `reusable`: `true` (boolean, required) - After filling the form it will be copied to the owner as the fillable form
+    + Default: false
++ `callbacks` (array[Callback_attr_post], optional)
++ `signature_stamp`: `false` (boolean, required)
+    + Default: true
++ `field_wizard`: `on` (enum[string], optional) - Fillable Form Input Status
+  On: displays fillable fields with wizard.
+  Off: displays fillable fields without wizard.
+  Disabled: disables fillable fields display.
+      + Members
+          + `on`
+          + `off`
+          + `disabled`
+      + Default: `disabled`
+
+## `Fillable_forms_attr_post` (object)
++ `document_id`: 1023456789 (number, required) - Id of the document template. This field is required if file parameter is omitted.
++ `additional_documents`: `[docs1, docs2]` (array, optional) - Additional documents required after filling the document
++ `signature_stamp`: `false` (boolean, optional)
+    + Default: true
++ `field_wizard`: `on` (enum[string], optional) - Fillable Form Input Status
+  On: displays fillable fields with wizard.
+  Off: displays fillable fields without wizard.
+  Disabled: disables fillable fields display.
+      + Members
+          + `on`
+          + `off`
+          + `disabled`
+      + Default: `disabled`
++ `access` (enum[string], optional) - Access level for the fill request document. Full - read|write|sign.  Signature - read|sign.
+    + Members
+        + `full`
+        + `signature`
+    + Default: `full`
++ `status` (enum[string], optional) - Document access permission.
+    + Members
+        + `public` - open to everyone
+        + `private` - open to the document owner only
+    + Default: `public`
++ `email_required`: `true` (boolean, optional) - Email required
+    + Default: false
++ `allow_downloads`: `false` (boolean, optional) - Allow to download
+    + Default: false
++ `redirect_url`: `https://www.pdffiller.com` (string, optional) - Redirect uri
++ `name_required`: `true` (boolean, optional) - Name required
+    + Default: false
++ `custom_message`: `Some custom message` (string, optional) - LinkToFill custom message
++ `notification_emails` (array[Notification_emails], optional) - LinkToFill notification emails
++ `notifications` (enum[string], optional) - The notifications mode
+    + Members
+        + `disabled` - for no notifications
+        + `enabled` - for notifications only
+        + `with_pdf` - for notifications with PDF copy of document
++ `sender_notifications`: false (boolean)
+    + Default: true
++ `enforce_required_fields`: `true` (boolean, optional) - Prevent closing document before filling all fields
+    + Default: false
++ `custom_logo_id`: 123 (number, optional) - Document custom logo id
+    + Default: 0
++ `welcome_screen`: `false` (boolean, optional) - Shows welcome agreement each time when user will open LinkToFill
+    + Default: true
++ `reusable`: `true` (boolean, optional) - After filling the form it will be copied to the owner as the fillable form
+    + Default: false
++ `callback_url`: `http://pdffiller.com.ua` (string, optional)
++ `editor_type` (enum[string], optional)
+    + Members
+        + `flash` - Open fillable form in flash editor
+        + `js` - Open fillable form in js editor
+
+## `Fillable_forms_attr_post_file` (object)
++ `file`: `http://www.adobe.com/content/dam/Adobe/en/devnet/acrobat/pdfs/pdf_open_parameters.pdf` (string, required) - File to be uploaded. This field is required if document_id is omitted.
++ `folder_id`: 4523 (number, optional)
+    + Default: 0
++ `name`:  `filename` (string, optional)
++ `additional_documents`: `[docs1, docs2]` (array, optional) - Additional documents required after filling the document
++ `signature_stamp`: `false` (boolean, optional)
+    + Default: true
++ `access` (enum[string], optional) - Access level for the fill request document. Full - read|write|sign.  Signature - read|sign.
+    + Members
+        + `full`
+        + `signature`
+    + Default: `full`
++ `status` (enum[string], optional) - Document access permission.
+    + Members
+        + `public` - open to everyone
+        + `private` - open to the document owner only
+    + Default: `public`
++ `email_required`: `true` (boolean, optional) - Email required
+    + Default: false
++ `allow_downloads`: `false` (boolean, optional) - Allow to download
+    + Default: false
++ `redirect_url`: `https://www.pdffiller.com` (string, optional) - Redirect uri
++ `name_required`: `true` (boolean, optional) - Name required
+    + Default: false
++ `custom_message`: `Some custom message` (string, optional) - LinkToFill custom message
++ `notification_emails` (array[Notification_emails], optional) - LinkToFill notification emails
++ `notifications` (enum[string], optional) - The notifications mode
+    + Members
+        + `disabled` - for no notifications
+        + `enabled` - for notifications only
+        + `with_pdf` - for notifications with PDF copy of document
++ `sender_notifications`: false (boolean)
+    + Default: true
++ `enforce_required_fields`: `true` (boolean, optional) - Prevent closing document before filling all fields
+    + Default: false
++ `custom_logo_id`: 123 (number, optional) - Document custom logo id
+    + Default: 0
++ `welcome_screen`: `false` (boolean, optional) - Shows welcome agreement each time when user will open LinkToFill
+    + Default: true
++ `reusable`: `true` (boolean, optional) - After filling the form it will be copied to the owner as the fillable form
+    + Default: false
++ `callback_url`: `http://pdffiller.com.ua` (string, optional)
++ `editor_type` (enum[string], optional)
+    + Members
+        + `flash` - Open fillable form in flash editor
+        + `js` - Open fillable form in js editor
++ `signature_stamp` (boolean, optional)
+    + Default: true
+
+## `Fillable_forms_attr_post_pefill` (object)
++ `document_id`: 1023456789 (number, required) - Id of the document template. This field is required if file parameter is omitted.
++ `fillable_fields` (object, optional) - List of field(s) to be filled - does not apply to non-fillable documents.
+    + `Key_N`: `Value_N` (string, optional) -  Sets a field's fillable value by it's name (key).
++ `name` (string, optional)
++ `folder_id` (number, optional)
+    + Default: 0
++ `additional_documents`: `[docs1, docs2]` (array, optional) - Additional documents required after filling the document
++ `signature_stamp` (boolean, optional)
+    + Default: true
++ `access` (enum[string], optional) - Access level for the fill request document. Full - read|write|sign.  Signature - read|sign.
+    + Members
+        + `full`
+        + `signature`
+    + Default: `full`
++ `status` (enum[string], optional) - Document access permission.
+    + Members
+        + `public` - open to everyone
+        + `private` - open to the document owner only
+    + Default: `public`
++ `email_required`: `true` (boolean, optional) - Email required
+    + Default: false
++ `allow_downloads`: `false` (boolean, optional) - Allow to download
+    + Default: false
++ `redirect_url`: `https://www.pdffiller.com` (string, optional) - Redirect uri
++ `name_required`: `true` (boolean, optional) - Name required
+    + Default: false
++ `custom_message`: `Some custom message` (string, optional) - LinkToFill custom message
++ `notification_emails` (array[Notification_emails], optional) - LinkToFill notification emails
++ `notifications` (enum[string], optional) - The notifications mode
+    + Members
+        + `disabled` - for no notifications
+        + `enabled` - for notifications only
+        + `with_pdf` - for notifications with PDF copy of document
++ `sender_notifications`: false (boolean)
+    + Default: true
++ `enforce_required_fields`: `true` (boolean, optional) - Prevent closing document before filling all fields
+    + Default: false
++ `custom_logo_id`: 123 (number, optional) - Document custom logo id
+    + Default: 0
++ `welcome_screen`: `false` (boolean, optional) - Shows welcome agreement each time when user will open LinkToFill
+    + Default: true
++ `reusable`: `true` (boolean, optional) - After filling the form it will be copied to the owner as the fillable form
+    + Default: false
++ `callback_url`: `http://pdffiller.com.ua` (string, optional)
++ `editor_type` (enum[string], optional)
+    + Members
+        + `flash` - Open fillable form in flash editor
+        + `js` - Open fillable form in js editor
++ `signature_stamp` (boolean, optional)
+    + Default: true
+
+## `Fillable_forms_attr_put`
++ `access` (enum[string], optional) - Access level for the fill request document. Full - read|write|sign.  Signature - read|sign.
+    + Members
+        + `full`
+        + `signature`
+    + Default: `full`
++ `status` (enum[string], optional) - Document access permission.
+    + Members
+        + `public` - open to everyone
+        + `private` - open to the document owner only
+    + Default: `public`
++ `email_required`: `true` (boolean, optional) - Email required
+    + Default: false
++ `allow_downloads`: `false` (boolean, optional) - Allow to download
+    + Default: false
++ `redirect_url`: `https://www.pdffiller.com` (string, optional) - Redirect uri
++ `name_required`: `true` (boolean, optional) - Name required
+    + Default: false
++ `custom_message`: `Some custom message` (string, optional) - LinkToFill custom message
++ `notification_emails` (array[Notification_emails], optional) - LinkToFill notification emails
++ `notifications` (enum[string], optional) - The notifications mode
+    + Members
+        + `disabled` - for no notifications
+        + `enabled` - for notifications only
+        + `with_pdf` - for notifications with PDF copy of document
++ `sender_notifications`: false (boolean)
+    + Default: true
++ `enforce_required_fields`: `true` (boolean, optional) - Prevent closing document before filling all fields
+    + Default: false
++ `custom_logo_id`: 123 (number, optional) - Document custom logo id
+    + Default: 0
++ `welcome_screen`: `false` (boolean, optional) - Shows welcome agreement each time when user will open LinkToFill
+    + Default: true
++ `reusable`: `true` (boolean, optional) - After filling the form it will be copied to the owner as the fillable form
+    + Default: false
++ `signature_stamp` (boolean, optional)
+    + Default: true
+
+## `Fillable_field_attr`
++ `Key_N`: `Value_N` (string, optional) -  Sets a field's fillable value by it's name (key).
+
+## `Filled_forms_info` (object)
++ `filled_form_id`: 123456 (number, required) - Filled Form ID
++ `document_id`: 987654321 (number, required) - Template ID for created filled form
++ `name`: `John` (string, required)
+    + Default: ``
++ `email`: `some@mail.com` (string, required)
+    + Default: ``
++ `date`: 1491983011 (number, required) -
++ `ip`: `255.255.255.255` (string, required) -
++ `token` (array[Token_info]) - Attached token. Default value '[]'.
++ `additional_documents` (array[Additional_documents_response], required) - Additional documents attached to request
+    + Default: []
++ `reusable_document_id`: 12345678 (number, optional) - An ID of reusable fillable document. Present if reusable option is enabled for related LinkToFill
++ `signature_stamp`: `true` (boolean, optional) -
+
+## `Filled_forms_export_info` (object)
++ `id`: `161616` (string, required)
++ `email`: `N/A`(string, required)
++ `name`: `N/A` (string, required)
++ `date`: `30/12/1999` (string, required)
++ `time`: `12:59 pm` (string, required)
++ `total_pages`: 0 (number, required)
++ `status` (enum[string], required)
+    + Members
+        + `NOT EMAILED`
+        + `EMAILED`
++ `pages` (array[Filled_forms_pages], optional)
+
+## `Filled_forms_pages` (object)
++ `number`: 1 (number)
++ `fillable_fields_num`: 5 (number)
++ `prefilled_content_num`: 0 (number)
++ `fillable_fields` (array[Fillable_fields_on_pages])
+
+## `Fillable_fields_on_pages` (object)
++ `name`: `text_1` (string)
++ `content` (string)
+
+## `Send_to_sign_response` (object)
++ `signature_request_id`: 22969 (number)
++ `document_id`: 20802117 (number)
++ `document_name`: `file.pdf` (string)
++ `date_created`: 1491491820 (number)
++ `date_signed`: 0 (number)
++ `method`(enum[string])
+    + Members
+        + `sendtoeach` - document to be signed individually
+        + `sendtogroup` - document to be signed by a group of recipients
++ `status`: `IN_PROGRESS` (enum[string]) -
+    + Members
+        + `IN_PROGRESS`
+        + `DECLINE`
+        + `REJECTED`
+        + `COMPLETED`
++ `envelope_name`: `EnvelopeName` (string)
++ `security_pin`: `standard` (enum[string])
+    + Members
+        + `enhanced`
+        + `standard`
++ `sign_in_order`: false (boolean)
++ `sender_notifications`: false (boolean)
+    + Default: true
++ `recipients` (array[Recipients_response])
++ `callbacks` (array[S2S_Callbacks]) - Callback list
+
+## `Send_to_sign_inbox_response` (Send_to_sign_response)
++ `owner`: `some-email@domain.com` (string)
+
+## `Recipients_response` (object)
++ `id`: 57664 (number) - Read only field. Not used in post|put operations
++ `user_id`: 45454545 (number) - Document signer id. Read only field. Not used in post|put operations
++ `email`: `some-email@domain.com` (string) - Document signer email
++ `name`: `John Doe` (string) -
++ `status`: `SENT` (enum[string]) - Document email request status. Read only field. Not used in post|put operations
+    + Members
+        + `NOT_SENT`
+        + `DECLINE`
+        + `SENT`
+        + `SIGNED`
++ `order`: 0 (number) - Document signing order. Required only when signature request method is sendtogroup
++ `ip` (string) - IP of the document signer. Read only field. Not used in post|put operations
++ `require_photo`: `false` (boolean)
++ `message_subject`: `some text` (string) -
++ `message_text`: `some text` (string) -
++ `date_created`: 1491491820 (number) -
++ `date_signed`: 0 (number) -
++ `access`: `full` (enum[string]) -
+    + Members
+        + `full` - user can edit document while signing
+        + `signature` - user can only make a signature
++ `phone_authenticate` (string) - Password will be sent to authenticate user before signing the document
++ `additional_documents` (array[Additional_documents_response]) - Additional documents attached to a signature request
+    + Default: []
++ `roles` (array[Role_response]) - Role list assigned to the user
+    + Default: []
+
+
+## `S2S_Callbacks` (object)
++ `id`: 12345 (number)
+    + Default: 1
++ `event_id`: `signature_request.done` (string)
+    + Default: signature_request.done
++ `callback_url`: `http://apicallbacks.pdffiller.com` (string)
+    + Default: http://apicallbacks.pdffiller.com
+
+## `Role_response` (object)
++ `id`: 57664 (number) - Read only field. Not used in post|put operations
++ `name`: `Developers` (string) - Read only field. Name assigned to the role
+
+## `Send_to_sign_attr_post`
++ `document_id`: 1023456789 (number, required)- is required if `file` is omitted.
++ `method`: `sendtogroup` (enum[string], required)
+    + Members
+        + `sendtoeach` - document to be signed individually
+        + `sendtogroup` - document to be signed by a group of recipients
++ `envelope_name`: `Envelope API` - is required for sengtogroup method
++ `security_pin`: `standard`(enum[string])
+    + Members
+        + `standard` - No password required
+        + `enhanced` - Password Protected: create a password to ensure your recipient's security (only for SendToEach)
+    + Default: `standard`
++ `pin`: `123abc`(string) -  is required when security pin is enhanced
++ `sign_in_order`: `false` (boolean, optional)
++ `sender_notifications`: false (boolean)
+    + Default: true
++ `recipients`: (array, fixed)
+   + (object)
+       + `role`: 777 (number, optional) - Role id parameter, available only for 'sendtogroup' method
+       + `email`: `some-email@domain.com` (string, required) - Recipient's email address
+       + `name`: `John Doe` (string, required) - Recipient's name
+       + `require_photo`: `false` (boolean, optional) - Sets the option for requirement photo
+       + `message_subject`: `Digital signature request from API Testing Letter` (string, required) - Message subject
+       + `message_text`: Please sign and return the linked document with PDFfiller` (string, required) - Message text
+       + `access`: `signature` (enum[string], required)
+           + Members
+               + `full` - user can edit document while signing
+               + `signature` - user can only make a signature
+       + `phone_authenticate` (string, optional) - Option for phone notification setting
+       + `additional_documents`: docs1, docs2 (array, optional) - Sets the list of additional documents needed to apply after filling the template. Should not exceed the allowable 5 attachments limit.
++ `callback_url`: `http://api.pdffiller.com`
+
+## `Send_to_sign_attr_post_file` (object)
++ `file`: `https://www.adobe.com/content/dam/acom/en/devnet/acrobat/pdfs/pdf_open_parameters.pdf` (string, required) - File to be uploaded. This field is required if document_id is omitted.
++ `folder_id`: 0 (number, optional)
+    + Default: 0
++ `name`: `file.pdf` (string, optional)
++ `method`: `sendtogroup` (enum[string], required)
+    + Members
+        + `sendtoeach` - document to be signed individually
+        + `sendtogroup` - document to be signed by a group of recipients
++ `envelope_name`: `Envelope API` - is required for sengtogroup method
++ `security_pin`: `standard`(enum[string])
+    + Members
+        + `standard` - No password required
+        + `enhanced` - Password Protected: create a password to ensure your recipient's security (only for SendToEach)
+    + Default: `standard`
++ `pin`: `123abc`(string) -  is required when security pin is enhanced
++ `sign_in_order`: `false` (boolean, optional)
++ `sender_notifications`: false (boolean)
+    + Default: true
++ `recipients`: (array, fixed)
+   + (object)
+       + `role`: 777 (number, optional) - Role id parameter, available only for 'sendtogroup' method
+       + `email`: `some-email@domain.com` (string, required) - Recipient's email address
+       + `name`: `John Doe` (string, required) - Recipient's name
+       + `require_photo`: `false` (boolean, optional) - Sets the option for requirement photo
+       + `message_subject`: `Digital signature request from API Testing Letter` (string, required) - Message subject
+       + `message_text`: Please sign and return the linked document with PDFfiller` (string, required) - Message text
+       + `access`: `signature` (enum[string], required)
+           + Members
+               + `full` - user can edit document while signing
+               + `signature` - user can only make a signature
+       + `phone_authenticate` (string, optional) - Option for phone notification setting
+       + `additional_documents`: docs1, docs2 (array, optional) - Sets the list of additional documents needed to apply after filling the template. Should not exceed the allowable 5 attachments limit.
++ `callback_url`: `http://api.pdffiller.com`
+
+## `Send_to_sign_attr_post_prefill` (object)
++ `document_id`: 1023456789 (number, required)- is required if `file` is omitted.
++ `fillable_fields` (object, optional) - List of field(s) to be filled - does not apply to non-fillable documents.
+    + `Key_N`: `Value_N` (string, optional) -  Sets a field's fillable value by it's name (key).
++ `name`: `file.pdf` (string, optional)
++ `folder_id`: 0 (number, optional)
+    + Default: 0
++ `method`: `sendtogroup` (enum[string], required)
+    + Members
+        + `sendtoeach` - document to be signed individually
+        + `sendtogroup` - document to be signed by a group of recipients
++ `envelope_name`: `Envelope API` - is required for sengtogroup method
++ `security_pin`: `standard`(enum[string])
+    + Members
+        + `standard` - No password required
+        + `enhanced` - Password Protected: create a password to ensure your recipient's security (only for SendToEach)
+    + Default: `standard`
++ `pin`: `123abc`(string) -  is required when security pin is enhanced
++ `sign_in_order`: `false` (boolean, optional)
++ `sender_notifications`: false (boolean)
+    + Default: true
++ `recipients`: (array, fixed)
+   + (object)
+       + `role`: 777 (number, optional) - Role id parameter, available only for 'sendtogroup' method
+       + `email`: `some-email@domain.com` (string, required) - Recipient's email address
+       + `name`: `John Doe` (string, required) - Recipient's name
+       + `require_photo`: `false` (boolean, optional) - Sets the option for requirement photo
+       + `message_subject`: `Digital signature request from API Testing Letter` (string, required) - Message subject
+       + `message_text`: Please sign and return the linked document with PDFfiller` (string, required) - Message text
+       + `access`: `signature` (enum[string], required)
+           + Members
+               + `full` - user can edit document while signing
+               + `signature` - user can only make a signature
+       + `phone_authenticate` (string, optional) - Option for phone notification setting
+       + `additional_documents`: docs1, docs2 (array, optional) - Sets the list of additional documents needed to apply after filling the template. Should not exceed the allowable 5 attachments limit.
++ `callback_url`: `http://api.pdffiller.com`
+
+## `S2S_recipient` (object)
++ `role`: 777 (number) - Role id parameter, available only for 'sendtogroup' method
++ `email`: `some-email@domain.com` (string) - Recipient's email address
++ `name`: `John Doe` (string) - Recipient's name
++ `require_photo`: `false` (boolean) - Sets the option for requirement photo
++ `message_subject`: `Digital signature request from API Testing Letter` (string) - Message subject
++ `message_text`: `Please sign and return the linked document with PDFfiller` (string) - Message text
++ `access`: `signature` (enum[string])
+    + Members
+        + `full` - user can edit document while signing
+        + `signature` - user can only make a signature
++ `phone_authenticate` (string) - Option for phone notification setting
++ `additional_documents`: docs1, docs2 (array) - Sets the list of additional documents needed to apply after filling the template. Should not exceed the allowable 5 attachments limit.
+
+## `New_S2S_recipient` (object)
++ `recipients`: (array, fixed) - New Recipients
+    + `S2S_recipient` (object)
+        + `role`: 777 (number, optional) - Role id parameter, available only for 'sendtogroup' method
+        + `email`: `some-email@domain.com` (string, required) - Recipient's email address
+        + `name`: `John Doe` (string, required) - Recipient's name
+        + `require_photo`: `false` (boolean, optional) - Sets the option for requirement photo
+        + `message_subject`: `Digital signature request from API Testing Letter` (string, required) - Message subject
+        + `message_text`: Please sign and return the linked document with PDFfiller` (string, required) - Message text
+        + `access`: `signature` (enum[string], required)
+           + Members
+               + `full` - user can edit document while signing
+               + `signature` - user can only make a signature
+        + `phone_authenticate`: `80553451267` (string, optional) - Option for phone notification setting
+        + `additional_documents`: docs1, docs2 (array, optional) - Sets the list of additional documents needed to apply after filling the template. Should not exceed the allowable 5 attachments limit.
+## `Token_info` (object)
++ `id`: 123 (number, required)
++ `hash`: `some_hash_string` (string, required) - Token hash value
++ `data` (array, required, fixed) - Custom information attached to the token
+    + (object)
+        + `key_1`: `Foo` (string, optional)
+        + `key_2`: `Bar` (string, optional)
+        + `key_3`: 12345 (number, optional)
+
+## `Tokens_post` (object)
++ `data` (array, required, fixed) - Custom information attached to the token
+    + (object)
+        + `key_1`: `Foo` (string, optional)
+        + `key_2`: `Bar` (string, optional)
+        + `key_3`: 12345 (number, optional)
+
+## `Tokens_put` (object)
++ `data` (array, required, fixed) - Custom information attached to the token
+    + (object)
+        + `key_1`: `Foo` (string, optional)
+        + `key_2`: `Bar` (string, optional)
+        + `key_3`: 12345 (number, optional)
+## `Users_info` (object)
++ `id`: 123456789 (number)
++ `email`: `some-email@domain.com` (string)
++ `avatar`: `urlToAvatarIfExists` (string)
+
+## `Custom_logo_info` (object)
++ `id`: 3083 (number)
++ `width`: 250 (number)
++ `height`: 250 (number)
++ `filesize`: 2488 (number)
++ `logo_url`: `urlToLogo` (string)
+
+## `Custom_logo_post`
++ `file`: `http://static.pdffiller.com/img/icons/pdffiller-32x32.png` (string, required)
+
+## `Notification_emails` (object)
++ `name`: `Username` (string, optional)
++ `email`: `some-email@domain.com` (string, required)
+
+
+## `Additional_documents` (object)
++ `id`: `123` (number, required) - Read only field. Not used in post|put operations
++ `filename`: `filename` (string, required) - Filename of an additional document. Read only field. Not used in post|put operations
++ `ip`: `255.255.255.255` (string, required) - Read only field. Not used in post|put operations
++ `date_created`: `1491982463` (number, required) - Read only field. Not used in post|put operations
+
+## `Additional_documents_empty_response` (object)
++ `name`: `docs1` (string) - Document Request Notification name
++ `files` (array)
+
+## `Additional_documents_response` (object)
++ `name`: `docs1` (string) - Document Request Notification name
++ `files` (array[Additional_documents_filles_response]) - Attached files to Document Request Notification
+
+## `Additional_documents_filles_response` (object)
++ `id`: `119031` (number) - Read only field. Not used in post|put operations
++ `filename`: `filename.pdf` (string) - Filename of an additional document. Read only field. Not used in post|put operations
++ `ip`: `109.237.93.134` (string) - Read only field. Not used in post|put operations
++ `date_created`: `2017-03-10 10:06:33` - Read only field. Not used in post|put operations
+
+## `Documents_job` (object)
++ `job_id`: `LpcXeqtHqZwIEookrQ2vmGqRzVpj4t23` (string)
++ `message`: `Job has been successfully created` (string)
++ `callback_url` (string)
+## `Merge_request` (object)
++ `documents`: [`11111111`, `22222222`, `33333333`, `44444444`, `55555555`] (array, required),
++ `name`: `Merged` (string, required),
++ `folder_id` (number, optional)
+    + Default: 0
+
+## `Document_info_with_status` (object)
++ `id`: 12345678 (number)
+    + Default: 0
++ `name`: `PDF_FILE_NAME` (string)
++ `type`: `pdf` (string)
++ `status`: `complete` (enum[string])
+    + Members
+        + merging
+        + complete
++ `created`: 1457222400 (number)
+    + Default: 0
++ `updated`: 1457222400 (number)
+    + Default: 0
++ `folder` (object)
+    + `id`: 12345678 (number)
+        + Default: 0
+    + `name`: `My_folder` (string)
